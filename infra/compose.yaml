@@ -1,0 +1,20 @@
+# Local development only. Start with python -m erp.features.system.local_database up.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${ERP_COMPOSE_DB:?Use the local_database command}
+      POSTGRES_USER: ${ERP_COMPOSE_USER:?Use the local_database command}
+      POSTGRES_PASSWORD: ${ERP_COMPOSE_PASSWORD:?Use the local_database command}
+    ports:
+      - "127.0.0.1:${ERP_COMPOSE_PORT:?Use the local_database command}:5432"
+    volumes:
+      - erp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  erp_postgres_data:
