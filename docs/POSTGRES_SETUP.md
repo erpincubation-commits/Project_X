@@ -1,33 +1,68 @@
-# Local PostgreSQL development setup
+﻿# PostgreSQL development setup
 
-This is an isolated development database. The existing pilot still uses SQLite; the PostgreSQL customer master does not migrate old data. Do not enter production data. Docker Desktop must run with Linux containers enabled.
+## Native Windows installation
 
-1. From the repository root, create a virtual environment and install the project:
+Install PostgreSQL if it is absent. PostgreSQL 18 binaries were detected on this computer under `C:/Program Files/PostgreSQL/18/bin`. The helper uses these binaries to run a separate development cluster, without changing the installed Windows PostgreSQL service or its databases.
 
-   ```powershell
-   python -m venv .venv
-   .\.venv\Scripts\python.exe -m pip install -e .
-   ```
+```powershell
+npm ci
+npm run setup
+npm run db:check
+```
 
-2. If needed, copy `.env.example` to `.env` in the repository root. Set `DATABASE_URL` to a PostgreSQL URI, replacing `CHANGE_ME` with a strong development password. Percent-encode special characters in the username, password and database name (for example, `@` becomes `%40`). The default local host and port are `127.0.0.1:55432`. Python loads `.env` using `python-dotenv`; an existing process `DATABASE_URL` takes precedence.
+Run in a normal PowerShell terminal under your own Windows account. Windows restricted execution accounts may fail to start `pg_ctl` with a restricted-token error. Keep cluster ownership consistent: use the same Windows account for initialization, startup and shutdown. Set `PG_BIN` in `.env` if auto-detection chooses the wrong installation. The cluster version and binaries must match; upgrades require a tested PostgreSQL upgrade or dump/restore procedure.
 
-   The URL contains a password. `.env` is ignored by Git but remains plaintext: restrict Windows file permissions and never commit or share it. The local development container receives its password through its environment and Docker administrators can inspect it; use proper secret management and least-privilege accounts for deployment.
+The generated root `.env` contains a PostgreSQL connection URL, server port and bootstrap administrator credentials. It is ignored by Git and must be protected. The development cluster is `.local/postgres`, logs are `.local/postgres.log`, and the default port is 55432 on loopback. The database user is a development superuser because initdb creates it as the cluster owner; use separate migration and restricted runtime roles in production.
 
-3. Start the local database. The helper derives its settings from the URL and only permits a loopback host:
+```powershell
+npm run db:start
+npm run db:check
+npm run db:migrate
+npm run db:stop
+```
 
-   ```powershell
-   .\.venv\Scripts\python.exe -m erp.features.system.local_database up
-   ```
+Changing `DATABASE_URL` does not change a password already stored by PostgreSQL. Password rotation must update PostgreSQL and configuration together. Keep `.local/` outside Git. Never delete the data directory to fix a connection problem.
 
-4. Check the connection and initialize the schema:
+## Existing PostgreSQL server
 
-   ```powershell
-   .\.venv\Scripts\python.exe -m erp.features.system.database_check
-   .\.venv\Scripts\python.exe -m erp migrate
-   .\.venv\Scripts\python.exe -m erp add-customer CUST-001 'Example Customer'
-   .\.venv\Scripts\python.exe -m erp list-customers
-   ```
+Configure `DATABASE_URL` in the root `.env` with a database and account provisioned by your administrator. Percent-encode special characters in connection URI credentials. Then run:
 
-To stop the container without removing its data, run `python -m erp.features.system.local_database stop` using the virtual environment interpreter. Docker keeps data in the named `erp_postgres_data` volume. The PostgreSQL image applies the user, database and password only when initializing an empty volume: changing the URL does not change an existing database account or its password. Rotate the database password inside PostgreSQL and update the URL together. Do not delete the volume unless its contents are intentionally disposable.
+```powershell
+npm run build:server
+npm run db:check
+npm run db:migrate
+```
 
-The customer master has an initial schema but is not connected to the desktop UI or the older pilot workflows. Production authentication, authorization, backups, recovery and migration procedures still need to be developed and verified.
+Do not run the native setup command against an existing remote deployment. Migrations need schema creation permissions. If both bootstrap administrator values are set, migration creates that account only if its email is absent; it never changes an existing password or role.
+
+## Docker alternative
+
+Start Docker Desktop in Linux-container mode. Use the same root `.env`, then:
+
+```powershell
+node tools/init-env.mjs
+npm run build:server
+npm run db:docker
+npm run db:migrate
+```
+
+Use either Docker or the native cluster on port 55432. The helper derives Docker credentials from `DATABASE_URL` and runs `infra/compose.yaml`. Data persists in the named Docker volume. Stop it with `docker compose -f infra/compose.yaml stop`; do not use `down -v` unless intentionally destroying disposable data. If Docker needs environment values for that command, `docker stop` using the container name shown by `docker ps` also preserves data.
+
+## Additional users
+
+The administrator bootstrap credentials are in `.env`. To create another account, set environment variables in a PowerShell session, run the command, then clear them:
+
+```powershell
+$env:NEW_USER_EMAIL = 'viewer@company.test'
+$env:NEW_USER_ROLE = 'reader'
+$securePassword = Read-Host 'New account password (12+ characters)' -AsSecureString
+$env:NEW_USER_PASSWORD = [System.Net.NetworkCredential]::new('', $securePassword).Password
+npm run db:create-user
+Remove-Item Env:NEW_USER_EMAIL, Env:NEW_USER_ROLE, Env:NEW_USER_PASSWORD
+```
+
+Allowed roles are `admin` and `reader`. Runtime role management and password changes still need implementation. Account provisioning requires database administrator access. Bootstrap passwords can be removed from `.env` after creating accounts; existing accounts remain valid.
+
+## Verification
+
+Run `npm test`, `npm run test:integration` and `npm run test:desktop`. The latter two use temporary test schemas and clean them up. No existing customer rows are changed. An interrupted test may leave an `erp_test_...` schema for an administrator to inspect and remove.

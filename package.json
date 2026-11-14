@@ -1,0 +1,30 @@
+{
+  "name": "smb-erp",
+  "version": "0.2.0",
+  "private": true,
+  "description": "On-premises ERP desktop and application server",
+  "workspaces": ["apps/*", "packages/*"],
+  "engines": { "node": ">=22.12.0" },
+  "devDependencies": { "playwright-core": "^1.0.0" },
+  "scripts": {
+    "setup": "node tools/init-env.mjs && npm run db:setup",
+    "build": "npm run build -w @erp/contracts && npm run build -w @erp/server && npm run build -w @erp/desktop",
+    "build:server": "npm run build -w @erp/contracts && npm run build -w @erp/server",
+    "build:desktop": "npm run build -w @erp/contracts && npm run build -w @erp/desktop",
+    "server": "npm run start -w @erp/server",
+    "desktop": "npm run start -w @erp/desktop",
+    "start": "node tools/start.mjs",
+    "check": "npm run build -w @erp/contracts && npm run check --workspaces --if-present",
+    "test": "npm run build:server && node --test apps/server/test/*.test.cjs",
+    "test:integration": "npm run build:server && node --test apps/server/test/*.integration.cjs",
+    "test:desktop": "npm run build && node tools/desktop-smoke.mjs",
+    "db:setup": "npm run build:server && node apps/server/dist/database/cli.js setup",
+    "db:start": "node apps/server/dist/database/cli.js start",
+    "db:stop": "node apps/server/dist/database/cli.js stop",
+    "db:check": "node apps/server/dist/database/cli.js check",
+    "db:migrate": "node apps/server/dist/database/cli.js migrate",
+    "db:docker": "node apps/server/dist/database/cli.js docker",
+    "db:create-user": "node apps/server/dist/database/cli.js create-user",
+    "package:windows": "npm run build:desktop && npm run package:windows -w @erp/desktop"
+  }
+}

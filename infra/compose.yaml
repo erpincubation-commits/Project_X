@@ -1,4 +1,4 @@
-# Local development only. Start with python -m erp.features.system.local_database up.
+# Alternative local development database. Start with npm run db:docker.
 services:
   postgres:
     image: postgres:17
