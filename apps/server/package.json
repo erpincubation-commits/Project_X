@@ -1,0 +1,10 @@
+{
+  "name": "@erp/server", "version": "0.2.0", "private": true,
+  "scripts": { "build": "tsc -p tsconfig.json", "check": "tsc -p tsconfig.json --noEmit", "start": "node dist/main.js" },
+  "dependencies": {
+    "@erp/contracts": "0.2.0", "@nestjs/common": "^11.0.0", "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0", "bcryptjs": "^3.0.0", "dotenv": "^17.0.0",
+    "helmet": "^8.0.0", "pg": "^8.0.0", "reflect-metadata": "^0.2.0", "rxjs": "^7.8.0", "zod": "^4.0.0"
+  },
+  "devDependencies": { "@types/express": "^5.0.0", "@types/pg": "^8.0.0", "@types/node": "^24.0.0", "typescript": "^5.9.0" }
+}

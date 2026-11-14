@@ -1,0 +1,78 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { randomUUID } from 'node:crypto';
+import { mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { _electron } from 'playwright-core';
+
+const require = createRequire(import.meta.url);
+const root = fileURLToPath(new URL('../', import.meta.url));
+require('../apps/server/dist/config.js');
+const { Pool } = require('pg');
+const { hash } = require('bcryptjs');
+const { migrate } = require('../apps/server/dist/database/migrate.js');
+const originalUrl = process.env.DATABASE_URL;
+assert.ok(originalUrl, 'Run npm run setup before the desktop smoke test.');
+const schema = `erp_test_${randomUUID().replaceAll('-', '')}`;
+assert.match(schema, /^erp_test_[a-f0-9]{32}$/);
+const owner = new Pool({ connectionString: originalUrl });
+const url = new URL(originalUrl);
+url.searchParams.set('options', `-c search_path=${schema}`);
+await owner.query(`CREATE SCHEMA "${schema}"`);
+process.env.DATABASE_URL = url.toString();
+const pool = new Pool({ connectionString: url.toString() });
+const applications = [];
+let server;
+try {
+  await migrate(pool);
+  for (const role of ['admin', 'reader']) await pool.query('INSERT INTO erp_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)', [randomUUID(), `${role}@smoke.test`, await hash('desktop-test-password', 4), role]);
+  server = await require('../apps/server/dist/bootstrap.js').createApplication();
+  await server.listen(0, '127.0.0.1');
+  const serverUrl = await server.getUrl();
+  const profileRoot = resolve(root, '.local', schema);
+  await mkdir(profileRoot, { recursive: true });
+  async function client(role) {
+    const profile = resolve(profileRoot, role);
+    await mkdir(profile, { recursive: true });
+    const env = { ...process.env, ERP_SMOKE_PROFILE: profile };
+    delete env.ELECTRON_RUN_AS_NODE;
+    const application = await _electron.launch({ executablePath: require('electron'), args: [resolve(root, 'apps/desktop')], env, timeout: 30000 });
+    applications.push(application);
+    const page = await application.firstWindow();
+    page.on('pageerror', error => console.error('Renderer error:', error.message));
+    await page.getByLabel('Server address').fill(serverUrl);
+    await page.getByRole('button', { name: 'Connect', exact: true }).click();
+    await page.getByText('Server connected. You can sign in.', { exact: true }).waitFor();
+    await page.getByLabel('Email', { exact: true }).fill(`${role}@smoke.test`);
+    await page.getByLabel('Password', { exact: true }).fill('desktop-test-password');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.getByRole('heading', { name: 'Your customers' }).waitFor();
+    assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
+    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['connect','createCustomer','getServer','listCustomers','login','logout'].sort());
+    return page;
+  }
+  const admin = await client('admin');
+  const reader = await client('reader');
+  assert.equal(await reader.getByRole('button', { name: 'Save customer' }).count(), 0);
+  await admin.getByLabel('Customer code', { exact: true }).fill('SMOKE-001');
+  await admin.getByLabel('Customer name', { exact: true }).fill('Desktop integration customer');
+  await admin.getByRole('button', { name: 'Save customer' }).click();
+  await admin.getByText('Customer SMOKE-001 saved to the shared database.', { exact: true }).waitFor();
+  await reader.getByRole('button', { name: 'Refresh customers' }).click();
+  await reader.getByRole('cell', { name: 'Desktop integration customer', exact: true }).waitFor();
+  const adminWindow = await applications[0].browserWindow(admin);
+  await adminWindow.evaluate(window => window.showInactive());
+  await admin.screenshot({ path: resolve(root, '.local/desktop-workflow.png') });
+  await reader.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await reader.getByRole('heading', { name: 'Connect to your workspace' }).waitFor();
+  assert.equal((await pool.query('SELECT count(*) FROM erp_customers')).rows[0].count, '1');
+  console.log('PASS: two Electron clients, sign-in, admin creation, read-only access, shared PostgreSQL persistence and sign-out.');
+} finally {
+  for (const application of applications) await application.close();
+  if (server) await server.close();
+  await pool.end();
+  process.env.DATABASE_URL = originalUrl;
+  await owner.query(`DROP SCHEMA "${schema}" CASCADE`);
+  await owner.end();
+}
