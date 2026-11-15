@@ -1,6 +1,6 @@
 ﻿# SMB ERP
 
-A Windows-first Electron desktop application, React interface, NestJS server and shared PostgreSQL database. The implemented workflow is sign in, create a customer, and view that customer from another client. Administrator and read-only roles are enforced by the server.
+A Windows-first Electron desktop application, React interface, NestJS server and shared PostgreSQL database. Implemented workflows include shared customers, supplier/item masters and purchase requests with independent approval or rejection. Permissions, versions, history and retries are enforced by the server.
 
 ## Quick start on Windows
 
@@ -31,6 +31,7 @@ apps/
   server/
     src/auth/         Login, sessions and authentication guard
     src/customers/    Customer controller and transactional persistence
+    src/procurement/  Supplier/item masters and versioned purchase request workflow
     src/database/     PostgreSQL pool, migrations and administration CLI
     src/common/       Validation and structured error responses
     test/             Contract and PostgreSQL integration tests
@@ -69,4 +70,4 @@ See [development and logs](docs/DEVELOPMENT.md) for live reload, error reference
 
 ## Current scope
 
-This is a development foundation with a working customer workflow, initial administrator setup, mandatory TOTP MFA, recovery codes, session revocation, server-enforced permissions and user/audit screens. Purchasing, accounting, inventory, configurable business roles/approvals, personal-data management, backup automation and production operations remain future work. No claim of GDPR compliance or production readiness is made. See [architecture](docs/DESKTOP_MIGRATION.md) and [deployment](docs/DEPLOYMENT.md).
+This is a development foundation with a working customer workflow, initial administrator setup, mandatory TOTP MFA, recovery codes, session revocation, server-enforced permissions and user/audit screens. Supplier/item masters and purchase request creation, submission, independent approval/rejection, revisions and history are implemented; see [purchasing setup](docs/PROCUREMENT.md). Purchase orders, stock, accounting, configurable approval policies, personal-data management, backup automation and production operations remain future work. No claim of GDPR compliance or production readiness is made. See [architecture](docs/DESKTOP_MIGRATION.md) and [deployment](docs/DEPLOYMENT.md).

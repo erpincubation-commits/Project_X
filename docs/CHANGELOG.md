@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## Unreleased — Supplier/item masters and purchase requests
+
+- Added versioned supplier and item registers with validation, active-state management and protected contact fields.
+- Added request drafts, submission to an independent approver, approval/rejection with reasons and revision of rejected requests.
+- Added scoped purchasing roles, exact decimal estimates, immutable record snapshots and atomic audit/retry records.
+- Added schema migration 4 and API concurrency/rollback coverage; expanded Electron verification through independent rejection, revision and approval.
+
 ## Unreleased — Administrator setup and MFA
 
 - Added protected first-run administrator setup and mandatory authenticator enrolment before a session is issued.

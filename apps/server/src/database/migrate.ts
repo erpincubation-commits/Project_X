@@ -57,6 +57,61 @@ const migrations = [
       PRIMARY KEY(user_id, code_hash)
     );
     DELETE FROM erp_sessions;
+  ` },
+  { version: 4, sql: `
+    ALTER TABLE erp_users DROP CONSTRAINT erp_users_role_check;
+    ALTER TABLE erp_users ADD CONSTRAINT erp_users_role_check CHECK (role IN ('admin','reader','identity_admin','auditor','requester','business_approver','purchasing'));
+    CREATE TABLE erp_suppliers (
+      id UUID PRIMARY KEY, code VARCHAR(32) UNIQUE NOT NULL CHECK(code ~ '^[A-Z0-9][A-Z0-9_-]{0,31}$'),
+      name VARCHAR(160) NOT NULL CHECK(length(btrim(name))>0), contact_email VARCHAR(254) NOT NULL DEFAULT '', phone VARCHAR(40) NOT NULL DEFAULT '',
+      payment_terms_days INTEGER NOT NULL DEFAULT 30 CHECK(payment_terms_days BETWEEN 0 AND 365), active BOOLEAN NOT NULL DEFAULT true,
+      version INTEGER NOT NULL DEFAULT 1 CHECK(version>0), created_by UUID NOT NULL REFERENCES erp_users(id), updated_by UUID NOT NULL REFERENCES erp_users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE erp_items (
+      id UUID PRIMARY KEY, code VARCHAR(32) UNIQUE NOT NULL CHECK(code ~ '^[A-Z0-9][A-Z0-9_-]{0,31}$'),
+      name VARCHAR(160) NOT NULL CHECK(length(btrim(name))>0), description VARCHAR(1000) NOT NULL DEFAULT '',
+      unit VARCHAR(16) NOT NULL CHECK(unit ~ '^[A-Z0-9][A-Z0-9._-]{0,15}$'), active BOOLEAN NOT NULL DEFAULT true,
+      version INTEGER NOT NULL DEFAULT 1 CHECK(version>0), created_by UUID NOT NULL REFERENCES erp_users(id), updated_by UUID NOT NULL REFERENCES erp_users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE SEQUENCE erp_purchase_request_numbers;
+    CREATE TABLE erp_purchase_requests (
+      id UUID PRIMARY KEY, number TEXT UNIQUE NOT NULL DEFAULT ('PR-' || nextval('erp_purchase_request_numbers')::text),
+      title VARCHAR(160) NOT NULL CHECK(length(btrim(title))>0), justification VARCHAR(2000) NOT NULL CHECK(length(btrim(justification))>=3), currency CHAR(3) NOT NULL CHECK(currency ~ '^[A-Z]{3}$'), needed_by DATE,
+      supplier_id UUID REFERENCES erp_suppliers(id), supplier_code VARCHAR(32), supplier_name VARCHAR(160), supplier_version INTEGER,
+      requester_id UUID NOT NULL REFERENCES erp_users(id), approver_id UUID REFERENCES erp_users(id),
+      status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN ('DRAFT','SUBMITTED','APPROVED','REJECTED')),
+      submitted_at TIMESTAMPTZ, decided_at TIMESTAMPTZ, decision_reason VARCHAR(1000),
+      version INTEGER NOT NULL DEFAULT 1 CHECK(version>0), created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CHECK(approver_id IS NULL OR approver_id<>requester_id),
+      CHECK((supplier_id IS NULL AND supplier_code IS NULL AND supplier_name IS NULL AND supplier_version IS NULL) OR (supplier_id IS NOT NULL AND supplier_code IS NOT NULL AND supplier_name IS NOT NULL AND supplier_version IS NOT NULL)),
+      CHECK((status='DRAFT' AND approver_id IS NULL AND submitted_at IS NULL AND decided_at IS NULL AND decision_reason IS NULL)
+        OR (status='SUBMITTED' AND approver_id IS NOT NULL AND submitted_at IS NOT NULL AND decided_at IS NULL AND decision_reason IS NULL)
+        OR (status IN ('APPROVED','REJECTED') AND approver_id IS NOT NULL AND submitted_at IS NOT NULL AND decided_at IS NOT NULL AND decision_reason IS NOT NULL)),
+      CHECK(status<>'REJECTED' OR length(btrim(decision_reason))>=3)
+    );
+    CREATE TABLE erp_purchase_request_lines (
+      id UUID PRIMARY KEY, request_id UUID NOT NULL REFERENCES erp_purchase_requests(id), line_no INTEGER NOT NULL CHECK(line_no BETWEEN 1 AND 100),
+      item_id UUID NOT NULL REFERENCES erp_items(id), item_code VARCHAR(32) NOT NULL, item_name VARCHAR(160) NOT NULL, item_version INTEGER NOT NULL,
+      unit VARCHAR(16) NOT NULL, quantity NUMERIC(15,6) NOT NULL CHECK(quantity>0), estimated_unit_price NUMERIC(14,4) NOT NULL CHECK(estimated_unit_price>=0),
+      UNIQUE(request_id,line_no), UNIQUE(request_id,item_id)
+    );
+    CREATE INDEX erp_requests_owner ON erp_purchase_requests(requester_id,created_at DESC);
+    CREATE INDEX erp_requests_approver ON erp_purchase_requests(approver_id,status,created_at DESC);
+    CREATE INDEX erp_requests_status ON erp_purchase_requests(status,created_at DESC);
+    CREATE TABLE erp_record_history (
+      id BIGSERIAL PRIMARY KEY, entity_type TEXT NOT NULL CHECK(entity_type IN ('supplier','item','purchase_request')), entity_id UUID NOT NULL,
+      version INTEGER NOT NULL CHECK(version>0), action TEXT NOT NULL, actor_id UUID NOT NULL REFERENCES erp_users(id),
+      occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(), snapshot JSONB NOT NULL,
+      UNIQUE(entity_type,entity_id,version)
+    );
+    CREATE INDEX erp_history_record ON erp_record_history(entity_type,entity_id,id DESC);
+    CREATE TRIGGER erp_history_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON erp_record_history FOR EACH STATEMENT EXECUTE FUNCTION erp_reject_audit_change();
+    CREATE TABLE erp_operations (
+      actor_id UUID NOT NULL REFERENCES erp_users(id), request_id UUID NOT NULL, operation TEXT NOT NULL,
+      payload JSONB NOT NULL, response JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY(actor_id,request_id)
+    );
   ` }
 ];
 

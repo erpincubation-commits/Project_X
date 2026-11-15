@@ -29,6 +29,6 @@ This requires DNS resolving the hostname and deployment of the internal certific
 
 ## Release limitations
 
-Implemented: customer creation/listing, initial administrator setup, bcrypt password hashing, mandatory TOTP MFA and recovery codes, four server-enforced roles, user access management, session expiry/revocation, authentication throttling, audit viewing/recording and idempotent customer creation. See [authentication setup and upgrades](AUTHENTICATION.md). The audit trigger blocks normal updates/deletes, but a database owner can bypass it; it is not tamper-proof storage.
+Implemented: customer creation/listing, initial administrator setup, bcrypt password hashing, mandatory TOTP MFA and recovery codes, seven server-enforced roles, user access management, session expiry/revocation, authentication throttling and audit viewing/recording. Supplier/item masters and purchase request submission/independent approval/rejection include history, version checks and idempotent writes. See [authentication](AUTHENTICATION.md) and [purchasing](PROCUREMENT.md). Database owners can bypass ordinary audit/history triggers; these are not tamper-proof storage.
 
 Outstanding: configurable business roles/approvals, account recovery operations, comprehensive rate limiting, backup automation and restore validation, production monitoring, full accounting/procurement/inventory, data-subject request and retention workflows, and security/privacy acceptance testing. These are required before calling the ERP production-ready or GDPR-compliant.

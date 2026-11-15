@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { Page, Supplier, Item, SupplierInput, ItemInput, SupplierUpdateInput, ItemUpdateInput, ProcurementQuery, PurchaseRequest, PurchaseRequestInput, PurchaseRequestUpdateInput, SubmitRequestInput, DecideRequestInput, RecordHistory, Approver } from './procurement';
+export * from './procurement';
 
 export const customerInput = z.object({
   code: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/, 'Use 1–32 letters, numbers, hyphens or underscores.').transform(value => value.toUpperCase()),
@@ -12,14 +14,18 @@ export const passwordInput = z.string().min(12, 'Use at least 12 characters.').m
   .refine(value => new TextEncoder().encode(value).length <= 72, 'Use at most 72 UTF-8 bytes.');
 export const setupInput = z.object({ email: loginInput.shape.email, password: passwordInput, setupToken: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 export const mfaInput = z.object({ challenge: z.string().regex(/^[a-f0-9]{64}$/), code: z.string().trim().min(6).max(40) }).strict();
-export const roleInput = z.enum(['admin', 'reader', 'identity_admin', 'auditor']);
+export const roleInput = z.enum(['admin', 'reader', 'identity_admin', 'auditor', 'requester', 'business_approver', 'purchasing']);
 export const createUserInput = z.object({ email: loginInput.shape.email, password: passwordInput, role: roleInput }).strict();
 export const updateUserInput = z.object({ role: roleInput, active: z.boolean() }).strict();
 export type Role = z.infer<typeof roleInput>;
-export type Permission = 'customers.read' | 'customers.create' | 'users.manage' | 'audit.read';
+export type Permission = 'customers.read' | 'customers.create' | 'users.manage' | 'audit.read' | 'masters.read' | 'masters.manage' | 'masters.history' | 'requests.read' | 'requests.read.all' | 'requests.create' | 'requests.decide';
 export const rolePermissions: Record<Role, readonly Permission[]> = {
-  admin: ['customers.read', 'customers.create', 'users.manage', 'audit.read'],
-  reader: ['customers.read'], identity_admin: ['users.manage'], auditor: ['customers.read', 'audit.read']
+  admin: ['customers.read', 'customers.create', 'users.manage', 'audit.read', 'masters.read', 'masters.manage', 'masters.history', 'requests.read', 'requests.read.all', 'requests.create'],
+  reader: ['customers.read'], identity_admin: ['users.manage'],
+  auditor: ['customers.read', 'audit.read', 'masters.read', 'masters.history', 'requests.read', 'requests.read.all'],
+  requester: ['masters.read', 'requests.read', 'requests.create'],
+  business_approver: ['masters.read', 'requests.read', 'requests.create', 'requests.decide'],
+  purchasing: ['masters.read', 'masters.manage', 'masters.history', 'requests.read', 'requests.read.all', 'requests.create']
 };
 export interface SetupStatus { setupRequired: boolean }
 export interface AuthChallenge { challenge: string; mfaRequired: true; enrollment?: { secret: string; uri: string } }
@@ -51,4 +57,18 @@ export interface DesktopAPI {
   logout(): Promise<Result<null>>;
   listCustomers(page: number): Promise<Result<CustomerPage>>;
   createCustomer(input: CustomerInput, requestId: string): Promise<Result<Customer>>;
+  listSuppliers(query: Partial<ProcurementQuery>): Promise<Result<Page<Supplier>>>;
+  createSupplier(input: SupplierInput, requestId: string): Promise<Result<Supplier>>;
+  updateSupplier(id: string, input: SupplierUpdateInput, requestId: string): Promise<Result<Supplier>>;
+  listItems(query: Partial<ProcurementQuery>): Promise<Result<Page<Item>>>;
+  createItem(input: ItemInput, requestId: string): Promise<Result<Item>>;
+  updateItem(id: string, input: ItemUpdateInput, requestId: string): Promise<Result<Item>>;
+  listPurchaseRequests(query: Partial<ProcurementQuery>): Promise<Result<Page<PurchaseRequest>>>;
+  getPurchaseRequest(id: string): Promise<Result<PurchaseRequest>>;
+  createPurchaseRequest(input: PurchaseRequestInput, requestId: string): Promise<Result<PurchaseRequest>>;
+  updatePurchaseRequest(id: string, input: PurchaseRequestUpdateInput, requestId: string): Promise<Result<PurchaseRequest>>;
+  submitPurchaseRequest(id: string, input: SubmitRequestInput, requestId: string): Promise<Result<PurchaseRequest>>;
+  decidePurchaseRequest(id: string, input: DecideRequestInput, requestId: string): Promise<Result<PurchaseRequest>>;
+  listApprovers(): Promise<Result<Approver[]>>;
+  recordHistory(kind: 'supplier' | 'item' | 'purchase_request', id: string): Promise<Result<RecordHistory[]>>;
 }

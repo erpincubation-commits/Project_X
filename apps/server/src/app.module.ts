@@ -7,6 +7,8 @@ import { CustomersController } from './customers/customers.controller';
 import { CustomersService } from './customers/customers.service';
 import { AccessController } from './auth/access.controller';
 import { PermissionsGuard } from './auth/permissions.guard';
+import { ProcurementController } from './procurement/procurement.controller';
+import { ProcurementService } from './procurement/procurement.service';
 
 @Controller('health')
 class HealthController {
@@ -17,7 +19,7 @@ class HealthController {
   }
 }
 @Module({
-  controllers: [HealthController, AuthController, CustomersController, AccessController],
-  providers: [DatabaseService, AuthService, AuthGuard, PermissionsGuard, CustomersService]
+  controllers: [HealthController, AuthController, CustomersController, AccessController, ProcurementController],
+  providers: [DatabaseService, AuthService, AuthGuard, PermissionsGuard, CustomersService, ProcurementService]
 })
 export class AppModule {}

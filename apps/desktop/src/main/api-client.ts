@@ -3,6 +3,7 @@ import { net } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { diagnosticError } from '@erp/logging';
 import { desktopLog } from './logger';
+import type { Page, Supplier, Item, SupplierInput, ItemInput, SupplierUpdateInput, ItemUpdateInput, ProcurementQuery, PurchaseRequest, PurchaseRequestInput, PurchaseRequestUpdateInput, SubmitRequestInput, DecideRequestInput, RecordHistory, Approver } from '@erp/contracts';
 
 export function normalizeServer(value: string): string {
   const url = new URL(value);
@@ -89,4 +90,19 @@ export class ApiClient {
   }
   listCustomers(page: number) { return this.request<CustomerPage>(`/customers?page=${page}`); }
   createCustomer(input: CustomerInput, requestId: string) { return this.request<Customer>('/customers', 'POST', input, requestId); }
+  private query(query: Partial<ProcurementQuery>) { return new URLSearchParams(Object.entries(query).map(([key,value])=>[key,String(value)])).toString(); }
+  listSuppliers(query: Partial<ProcurementQuery>) { return this.request<Page<Supplier>>(`/procurement/suppliers?${this.query(query)}`); }
+  createSupplier(input: SupplierInput,key: string) { return this.request<Supplier>('/procurement/suppliers','POST',input,key); }
+  updateSupplier(id: string,input: SupplierUpdateInput,key: string) { return this.request<Supplier>(`/procurement/suppliers/${id}`,'PATCH',input,key); }
+  listItems(query: Partial<ProcurementQuery>) { return this.request<Page<Item>>(`/procurement/items?${this.query(query)}`); }
+  createItem(input: ItemInput,key: string) { return this.request<Item>('/procurement/items','POST',input,key); }
+  updateItem(id: string,input: ItemUpdateInput,key: string) { return this.request<Item>(`/procurement/items/${id}`,'PATCH',input,key); }
+  listPurchaseRequests(query: Partial<ProcurementQuery>) { return this.request<Page<PurchaseRequest>>(`/procurement/requests?${this.query(query)}`); }
+  getPurchaseRequest(id: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}`); }
+  createPurchaseRequest(input: PurchaseRequestInput,key: string) { return this.request<PurchaseRequest>('/procurement/requests','POST',input,key); }
+  updatePurchaseRequest(id: string,input: PurchaseRequestUpdateInput,key: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}`,'PATCH',input,key); }
+  submitPurchaseRequest(id: string,input: SubmitRequestInput,key: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}/submit`,'POST',input,key); }
+  decidePurchaseRequest(id: string,input: DecideRequestInput,key: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}/decide`,'POST',input,key); }
+  listApprovers() { return this.request<Approver[]>('/procurement/approvers'); }
+  recordHistory(kind: 'supplier' | 'item' | 'purchase_request',id: string) { return this.request<RecordHistory[]>(`/procurement/history/${kind}/${id}`); }
 }
