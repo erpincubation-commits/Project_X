@@ -49,7 +49,7 @@ try {
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.getByRole('heading', { name: 'Your customers' }).waitFor();
     assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
-    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['connect','createCustomer','getServer','listCustomers','login','logout'].sort());
+    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['connect','createCustomer','getServer','listCustomers','login','logout','openLogs','reportError'].sort());
     return page;
   }
   const admin = await client('admin');

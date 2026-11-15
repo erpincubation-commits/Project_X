@@ -7,6 +7,8 @@ import { Pool } from 'pg';
 import { z } from 'zod';
 import { projectRoot, settings } from '../config';
 import { migrate } from './migrate';
+import { serverLog } from '../common/logger';
+import { diagnosticError } from '@erp/logging';
 
 function run(binary: string, args: string[]) {
   const result = spawnSync(binary, args, { cwd: projectRoot, encoding: 'utf8', windowsHide: true, timeout: 120000 });
@@ -113,7 +115,7 @@ async function main() {
     process.env.ERP_COMPOSE_USER = decodeURIComponent(url.username);
     process.env.ERP_COMPOSE_PASSWORD = decodeURIComponent(url.password);
     process.env.ERP_COMPOSE_DB = decodeURIComponent(url.pathname.slice(1));
-    process.env.ERP_COMPOSE_PORT = url.port || '55432';
+    process.env.ERP_COMPOSE_PORT = url.port || '5432';
     run('docker', ['compose', '-f', 'infra/compose.yaml', 'up', '-d', '--wait']);
     return;
   }
@@ -132,6 +134,7 @@ async function main() {
   } finally { await pool.end(); }
 }
 main().catch(error => {
+  serverLog.error('database.command_failed', diagnosticError(error));
   const code = (error as { code?: string }).code;
   console.error(code ? `Database operation failed (${code}). Check PostgreSQL and the root .env file.` : error instanceof Error ? error.message : 'Database setup failed.');
   process.exitCode = 1;

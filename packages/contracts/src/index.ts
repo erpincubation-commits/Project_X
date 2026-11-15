@@ -14,6 +14,8 @@ export interface User { id: string; email: string; role: 'admin' | 'reader' }
 export interface CustomerPage { items: Customer[]; total: number; page: number; pageSize: number }
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string; status?: number };
 export interface DesktopAPI {
+  openLogs(): Promise<Result<null>>;
+  reportError(kind: 'render' | 'script' | 'promise' | 'action'): Promise<void>;
   getServer(): Promise<string>;
   connect(url: string): Promise<Result<{ status: string }>>;
   login(input: z.infer<typeof loginInput>): Promise<Result<User>>;

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2022", "strict": true, "skipLibCheck": true,
+    "target": "ES2022", "strict": true, "skipLibCheck": true, "noEmitOnError": true,
     "esModuleInterop": true, "forceConsistentCasingInFileNames": true
   }
 }

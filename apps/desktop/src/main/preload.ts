@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopAPI } from '@erp/contracts';
 
 const api: DesktopAPI = {
+  openLogs: () => ipcRenderer.invoke('diagnostics:open'),
+  reportError: kind => ipcRenderer.invoke('diagnostics:report', kind),
   getServer: () => ipcRenderer.invoke('server:get'),
   connect: url => ipcRenderer.invoke('server:connect', url),
   login: input => ipcRenderer.invoke('auth:login', input),

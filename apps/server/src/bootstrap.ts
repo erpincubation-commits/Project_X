@@ -5,9 +5,13 @@ import { json } from 'express';
 import { AppModule } from './app.module';
 import { ErrorFilter } from './common/error.filter';
 import { DatabaseService } from './database/database.service';
+import { NestLogger, serverLog } from './common/logger';
+import { diagnosticError } from '@erp/logging';
+import { requestLogging } from './common/request-logging';
 
 export async function createApplication() {
-  const app = await NestFactory.create(AppModule, { bodyParser: false, logger: ['error', 'warn', 'log'] });
+  const app = await NestFactory.create(AppModule, { bodyParser: false, logger: new NestLogger(), abortOnError: false });
+  app.use(requestLogging);
   app.use(helmet());
   app.use(json({ limit: '16kb' }));
   app.setGlobalPrefix('api/v1');
@@ -16,7 +20,8 @@ export async function createApplication() {
   try {
     const result = await app.get(DatabaseService).pool.query('SELECT max(version) AS version FROM erp_schema_migrations');
     if (result.rows[0].version !== 2) throw new Error('Schema mismatch');
-  } catch {
+  } catch (error) {
+    serverLog.error('database.startup_failed', diagnosticError(error));
     await app.close();
     throw new Error('Database is unavailable or migrations are missing. Run npm run db:check and npm run db:migrate.');
   }

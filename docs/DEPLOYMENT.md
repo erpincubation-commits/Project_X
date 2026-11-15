@@ -2,7 +2,7 @@
 
 ## Development on one computer
 
-The API listens on `127.0.0.1:3001` by default. PostgreSQL listens on `127.0.0.1:55432`. `npm start` is a convenience launcher for development; it does not install a Windows service. For independent processes, build once and run `npm run server` and `npm run desktop` in separate terminals.
+The API listens on `127.0.0.1:3001` by default. PostgreSQL listens on `127.0.0.1:5432`. `npm start` is a convenience launcher for development; it does not install a Windows service. For independent processes, build once and run `npm run server` and `npm run desktop` in separate terminals.
 
 ## Multiple computers
 

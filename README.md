@@ -14,7 +14,7 @@ npm run setup
 npm start
 ```
 
-`setup` creates an ignored root `.env` with random passwords, initializes an isolated cluster under `.local/postgres`, starts it on `127.0.0.1:55432`, applies migrations and creates an administrator. It preserves an existing `.env`. Open `.env` and use `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` to sign in. Do not share or commit this file.
+`setup` creates an ignored root `.env` with random passwords, initializes an isolated cluster under `.local/postgres`, starts it on `127.0.0.1:5432`, applies migrations and creates an administrator. It preserves an existing `.env`. Open `.env` and use `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` to sign in. Do not share or commit this file.
 
 `npm start` builds both applications, starts the server, waits for readiness and opens Electron. Click **Connect**, sign in, and save a customer. Run `npm run desktop` in another terminal to verify shared records in a second desktop client. Closing the app stops the server started by `npm start`; PostgreSQL remains running. Later launches may need `npm run db:start` after a reboot.
 
@@ -48,6 +48,8 @@ The application no longer contains a Python runtime, Python source or Python bui
 
 | Command | Purpose |
 |---|---|
+| `npm run dev` | Run NestJS watchers, Vite and Electron for development |
+| `npm run dev:server` / `npm run dev:desktop` | Run either development application independently |
 | `npm run build` | Compile contracts, server and desktop |
 | `npm run server` | Run the built server independently |
 | `npm run desktop` | Open another desktop client |
@@ -58,8 +60,11 @@ The application no longer contains a Python runtime, Python source or Python bui
 | `npm run test:integration` | Test authentication, permissions, shared data, retries and audit against PostgreSQL |
 | `npm run test:desktop` | Exercise two real Electron clients against an isolated test schema |
 | `npm run package:windows` | Build a Windows NSIS installer under `release/` |
+| `npm run test:packaged` | Launch and check the unpacked Windows desktop |
 
 Database tests create and remove their own temporary schemas. The database account must be permitted to create schemas. Desktop tests use profiles under `.local/` and produce `.local/desktop-workflow.png`.
+
+See [development and logs](docs/DEVELOPMENT.md) for live reload, error references and log locations, and [Windows installers](docs/WINDOWS_INSTALLER.md) for packaging, CI artifacts and signing.
 
 ## Current scope
 

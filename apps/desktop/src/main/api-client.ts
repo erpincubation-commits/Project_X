@@ -1,5 +1,8 @@
 import type { Customer, CustomerInput, CustomerPage, Result, User } from '@erp/contracts';
 import { net } from 'electron';
+import { randomUUID } from 'node:crypto';
+import { diagnosticError } from '@erp/logging';
+import { desktopLog } from './logger';
 
 export function normalizeServer(value: string): string {
   const url = new URL(value);
@@ -14,23 +17,29 @@ export class ApiClient {
   constructor(public server: string) { this.server = normalizeServer(server); }
 
   private async request<T>(path: string, method = 'GET', body?: unknown, requestId?: string): Promise<Result<T>> {
+    const correlationId = randomUUID();
+    const started = performance.now();
+    const route = path.split('?')[0];
     try {
       const response = await net.fetch(`${this.server}/api/v1${path}`, {
         method, redirect: 'error', credentials: 'omit', signal: AbortSignal.timeout(10000),
-        headers: { 'Content-Type': 'application/json', ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}), ...(requestId ? { 'Idempotency-Key': requestId } : {}) },
+        headers: { 'Content-Type': 'application/json', 'X-Request-ID': correlationId, ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}), ...(requestId ? { 'Idempotency-Key': requestId } : {}) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) })
       });
+      const fields = { requestId: correlationId, route, method, status: response.status, durationMs: Math.round(performance.now() - started) };
+      (response.ok ? desktopLog.info : desktopLog.warn)('api.response', fields);
       if (response.status === 204) return { ok: true, data: null as T };
       let data: unknown;
-      try { data = await response.json(); } catch { return { ok: false, error: 'The server returned an invalid response. Check the server address.', status: response.status }; }
+      try { data = await response.json(); } catch { desktopLog.warn('api.invalid_response', fields); return { ok: false, error: `The server returned an invalid response. Check the server address. Reference: ${correlationId}`, status: response.status }; }
       if (!response.ok) {
         if (response.status === 401) this.token = undefined;
         const message = data && typeof data === 'object' && 'message' in data && typeof data.message === 'string' ? data.message : 'The server rejected the request.';
-        return { ok: false, error: message, status: response.status };
+        return { ok: false, error: `${message} Reference: ${correlationId}`, status: response.status };
       }
       return { ok: true, data: data as T };
-    } catch {
-      return { ok: false, error: 'Cannot reach the server. Check its address, network connection, HTTPS certificate, and whether the server is running.' };
+    } catch (error) {
+      desktopLog.error('api.connection_failed', { requestId: correlationId, method, route, durationMs: Math.round(performance.now() - started), ...diagnosticError(error) });
+      return { ok: false, error: `Cannot reach the server. Check its address, network connection, HTTPS certificate, and whether the server is running. Reference: ${correlationId}` };
     }
   }
 

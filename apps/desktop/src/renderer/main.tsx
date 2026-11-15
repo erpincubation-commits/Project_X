@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { CustomerPage, Result, User } from '@erp/contracts';
 import './styles.css';
+import { ErrorBoundary, reportRendererError } from './error-boundary';
+
+window.addEventListener('error', () => reportRendererError('script'));
+window.addEventListener('unhandledrejection', event => { event.preventDefault(); reportRendererError('promise'); });
 
 function App() {
   const [server, setServer] = useState('http://127.0.0.1:3001');
@@ -27,7 +31,7 @@ function App() {
   }
   async function perform(work: () => Promise<void>) {
     setBusy(true); setError(''); setMessage('');
-    try { await work(); } catch { setError('The desktop could not complete this action. Restart the app and try again.'); }
+    try { await work(); } catch { reportRendererError('action'); setError('The desktop could not complete this action. Open diagnostic logs or restart the app and try again.'); }
     finally { setBusy(false); }
   }
   async function load(target = page) {
@@ -65,7 +69,7 @@ function App() {
     <main><header><div><span className="eyebrow">CUSTOMER ACCOUNTS</span><h1>{user ? 'Your customers' : 'Connect to your workspace'}</h1><p>{user ? `${user.email} · ${user.role === 'admin' ? 'Administrator' : 'Read only'}` : 'Sign in to your company server to get started.'}</p></div>
       {user && <button disabled={busy} className="secondary" onClick={() => perform(async () => { const result = await window.erp.logout(); setUser(null); setCustomers(null); setCode(''); setName(''); pending.current = null; if (!result.ok) setMessage('Signed out on this device. The server session will expire automatically.'); })}>Sign out</button>}
     </header>
-    {error && <div className="notice error" role="alert">{error}</div>}
+    {error && <div className="notice error" role="alert">{error} <button className="secondary" onClick={() => void window.erp.openLogs()}>Open diagnostic logs</button></div>}
     {message && <div className="notice success" role="status">{message}</div>}
     {!user ? <div className="setup-grid"><section className="card"><span className="eyebrow">01 / SERVER</span><h2>Connect to the server</h2><p>Use localhost on this computer, or the HTTPS address supplied by your administrator.</p>
       <form onSubmit={event => { event.preventDefault(); perform(async () => { const result = await window.erp.connect(server); if (resultData(result)) { setConnected(true); setMessage('Server connected. You can sign in.'); } else setConnected(false); }); }}>
@@ -85,7 +89,7 @@ function App() {
         <div className="pagination"><button className="secondary" disabled={busy || page === 1} onClick={() => perform(() => load(page - 1))}>Previous</button><span>Page {page}</span><button className="secondary" disabled={busy || !customers || page * customers.pageSize >= customers.total} onClick={() => perform(() => load(page + 1))}>Next</button></div>
       </section>
     </>}
-    <footer>SMB ERP · On-premises desktop workspace</footer></main>
+    <footer>SMB ERP · On-premises desktop workspace <button className="secondary" onClick={() => void window.erp.openLogs()}>Diagnostic logs</button></footer></main>
   </div>;
 }
-createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
+createRoot(document.getElementById('root')!).render(<React.StrictMode><ErrorBoundary><App/></ErrorBoundary></React.StrictMode>);

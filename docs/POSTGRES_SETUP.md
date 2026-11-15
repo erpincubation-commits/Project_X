@@ -12,7 +12,7 @@ npm run db:check
 
 Run in a normal PowerShell terminal under your own Windows account. Windows restricted execution accounts may fail to start `pg_ctl` with a restricted-token error. Keep cluster ownership consistent: use the same Windows account for initialization, startup and shutdown. Set `PG_BIN` in `.env` if auto-detection chooses the wrong installation. The cluster version and binaries must match; upgrades require a tested PostgreSQL upgrade or dump/restore procedure.
 
-The generated root `.env` contains a PostgreSQL connection URL, server port and bootstrap administrator credentials. It is ignored by Git and must be protected. The development cluster is `.local/postgres`, logs are `.local/postgres.log`, and the default port is 55432 on loopback. The database user is a development superuser because initdb creates it as the cluster owner; use separate migration and restricted runtime roles in production.
+The generated root `.env` contains a PostgreSQL connection URL, server port and bootstrap administrator credentials. It is ignored by Git and must be protected. The development cluster is `.local/postgres`, logs are `.local/postgres.log`, and the default port is 5432 on loopback. The database user is a development superuser because initdb creates it as the cluster owner; use separate migration and restricted runtime roles in production.
 
 ```powershell
 npm run db:start
@@ -46,7 +46,7 @@ npm run db:docker
 npm run db:migrate
 ```
 
-Use either Docker or the native cluster on port 55432. The helper derives Docker credentials from `DATABASE_URL` and runs `infra/compose.yaml`. Data persists in the named Docker volume. Stop it with `docker compose -f infra/compose.yaml stop`; do not use `down -v` unless intentionally destroying disposable data. If Docker needs environment values for that command, `docker stop` using the container name shown by `docker ps` also preserves data.
+Use either Docker or the native cluster on port 5432. The helper derives Docker credentials from `DATABASE_URL` and runs `infra/compose.yaml`. Data persists in the named Docker volume. Stop it with `docker compose -f infra/compose.yaml stop`; do not use `down -v` unless intentionally destroying disposable data. If Docker needs environment values for that command, `docker stop` using the container name shown by `docker ps` also preserves data.
 
 ## Additional users
 

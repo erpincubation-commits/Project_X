@@ -1,45 +1,36 @@
-import { spawn, spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+﻿import { build, createProcessGroup, electronEnvironment, launcherLog, require, waitForUrl } from './processes.mjs';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
-const require = createRequire(import.meta.url);
-const build = process.platform === 'win32'
-  ? spawnSync('cmd.exe', ['/d', '/s', '/c', 'npm run build'], { cwd: root, stdio: 'inherit', windowsHide: true })
-  : spawnSync('npm', ['run', 'build'], { cwd: root, stdio: 'inherit' });
-if (build.status !== 0) process.exit(build.status || 1);
-
-let server;
-let desktop;
-function stop() {
-  if (desktop && desktop.exitCode === null) desktop.kill();
-  if (server && server.exitCode === null) server.kill();
-}
-process.on('SIGINT', () => { stop(); process.exit(130); });
-process.on('SIGTERM', () => { stop(); process.exit(143); });
-process.on('exit', stop);
-async function main() {
+let group;
+let log;
+try {
+  build();
+  log = launcherLog();
+  group = createProcessGroup(log);
   const { settings } = require('../apps/server/dist/config.js');
   const { port, host } = settings();
-  const origin = `http://${['0.0.0.0', '::', '::1'].includes(host) ? '127.0.0.1' : host}:${port}`;
-  async function ready() {
-    try { const result = await fetch(`${origin}/api/v1/health`, { signal: AbortSignal.timeout(1000) }); return result.ok && (await result.json()).status === 'ready'; }
-    catch { return false; }
+  const hostname = host === '::1' ? '[::1]' : ['0.0.0.0','::'].includes(host) ? '127.0.0.1' : host;
+  const health = `http://${hostname}:${port}/api/v1/health`;
+  let existing;
+  try { existing = await fetch(health, { signal: AbortSignal.timeout(1000) }); } catch { /* No existing server. */ }
+  if (existing) {
+    if (!existing.ok || (await existing.json()).status !== 'ready') throw new Error('A server is already using the API port but is not ready. Check its PostgreSQL configuration or stop it before retrying.');
+    log.info('launcher.reusing_server');
+  } else {
+    const server = group.launch('server','apps/server/dist/main.js');
+    await waitForUrl(health, server);
+    server.on('exit', () => {
+      if (!group.stopped) {
+        log.error('launcher.server_stopped');
+        console.error('The ERP server stopped. Check .local/logs/server and restart the application.');
+      }
+    });
   }
-  if (!await ready()) {
-    server = spawn(process.execPath, ['apps/server/dist/main.js'], { cwd: root, stdio: 'inherit', windowsHide: true });
-    let connected = false;
-    for (let attempt = 0; attempt < 40; attempt++) {
-      if (await ready()) { connected = true; break; }
-      if (server.exitCode !== null) break;
-      await new Promise(resolve => setTimeout(resolve, 250));
-    }
-    if (!connected) throw new Error('The application server did not start. Run npm run db:start and npm run db:check, then retry.');
-  } else console.log('Using the server that is already running.');
-  const env = { ...process.env };
-  delete env.ELECTRON_RUN_AS_NODE;
-  desktop = spawn(process.execPath, [require.resolve('electron/cli.js'), 'apps/desktop'], { cwd: root, env, stdio: 'inherit', windowsHide: true });
-  desktop.on('error', () => { console.error('Electron could not start. Reinstall dependencies with npm ci.'); stop(); process.exitCode = 1; });
-  desktop.on('exit', code => { stop(); process.exitCode = code || 0; });
+  const desktop = group.launch('desktop',require.resolve('electron/cli.js'),['apps/desktop'],{env:electronEnvironment()});
+  desktop.on('exit', code => { group.stop(); process.exitCode = code || 0; });
+  log.info('launcher.ready');
+} catch (error) {
+  log?.error('launcher.startup_failed', { errorCode: error.code });
+  console.error(error.message);
+  console.error('Check .local/logs/launcher and .local/logs/server for diagnostics.');
+  group?.stop(); process.exitCode = 1;
 }
-main().catch(error => { console.error(error.message); stop(); process.exitCode = 1; });

@@ -30,6 +30,13 @@ test('shared server workflow: authentication, permissions, persistence, retries 
       return { status: response.status, data: response.status === 204 ? null : await response.json() };
     }
     assert.equal((await request('/health')).status, 200);
+    const reference = randomUUID();
+    const malformed = await fetch(`${base}/api/v1/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Request-ID': reference }, body: '{invalid-json' });
+    assert.equal(malformed.status, 400);
+    assert.equal(malformed.headers.get('X-Request-ID'), reference);
+    assert.equal((await malformed.json()).requestId, reference);
+    const tooLarge = await fetch(`${base}/api/v1/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: 'x'.repeat(18000) }) });
+    assert.equal(tooLarge.status, 413);
     assert.equal((await request('/customers')).status, 401);
     assert.equal((await request('/auth/login', 'POST', { email: 'admin@local.test', password: 'incorrect' })).status, 401);
     const login = async role => (await request('/auth/login', 'POST', { email: `${role}@local.test`, password: 'integration-password' })).data.token;
@@ -56,7 +63,10 @@ test('shared server workflow: authentication, permissions, persistence, retries 
     await assert.rejects(() => pool.query("UPDATE erp_audit_events SET action='tampered'"));
     // Fail the audit insert to prove that the associated customer insert rolls back.
     await pool.query(`CREATE FUNCTION reject_test_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.entity_id='FAIL' THEN RAISE EXCEPTION 'test failure'; END IF; RETURN NEW; END; $$; CREATE TRIGGER fail_test_audit BEFORE INSERT ON erp_audit_events FOR EACH ROW EXECUTE FUNCTION reject_test_audit()`);
-    assert.equal((await request('/customers', 'POST', { code: 'FAIL', name: 'Must roll back' }, admin, randomUUID())).status, 500);
+    const rollbackFailure = await request('/customers', 'POST', { code: 'FAIL', name: 'Must roll back' }, admin, randomUUID());
+    assert.equal(rollbackFailure.status, 500);
+    assert.match(rollbackFailure.data.requestId, /^[a-f0-9-]{36}$/);
+    assert.ok(!JSON.stringify(rollbackFailure.data).includes('test failure'));
     assert.equal((await pool.query("SELECT count(*) FROM erp_customers WHERE code='FAIL'")).rows[0].count, '0');
     assert.equal((await request('/auth/logout', 'POST', undefined, admin)).status, 204);
     assert.equal((await request('/customers', 'GET', undefined, admin)).status, 401);
