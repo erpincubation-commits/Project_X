@@ -4,7 +4,7 @@
 
 Electron loads bundled React/TypeScript assets in a sandboxed renderer. A context-isolated preload exposes a small set of typed operations. The main process validates IPC senders, handles server requests and retains session tokens in memory. Arbitrary IPC, Node.js access and direct renderer network access are not exposed.
 
-The NestJS server validates requests, enforces admin/read-only permissions, manages sessions and owns database transactions. PostgreSQL stores customers, accounts, session-token hashes, migrations, audit events and idempotency responses. Desktop clients never connect directly to PostgreSQL. Shared contracts are in `packages/contracts`.
+The NestJS server validates requests, enforces permissions for administrator, reader, identity administrator and auditor roles, manages MFA and sessions, and owns database transactions. PostgreSQL stores customers, accounts, encrypted MFA secrets, recovery/challenge/session hashes, migrations, audit events and idempotency responses. Desktop clients never connect directly to PostgreSQL. Shared contracts are in `packages/contracts`. See [authentication](AUTHENTICATION.md) for first-run setup and migration instructions.
 
 ## Implemented workflow
 
@@ -15,7 +15,7 @@ The native database helper manages an isolated development cluster under `.local
 ## Next delivery stages
 
 1. Agree workflow states, accounting postings, permission matrix, country, stock costing and legacy-data migration requirements.
-2. Extend identity with MFA, granular roles, administrative account management and configurable approval rules.
+2. Extend the implemented MFA, administrative account management and four-role permissions with configurable business roles and approval rules.
 3. Implement supplier and item masters, then purchase requests and independent approvals as the next complete workflow.
 4. Build finance and inventory invariants, purchase orders, receiving, matching, payments and reconciliation.
 5. Validate security, concurrency, accessibility, load, backup/recovery, migration and financial acceptance before production.

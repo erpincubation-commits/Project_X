@@ -8,8 +8,10 @@ import { DatabaseService } from './database/database.service';
 import { NestLogger, serverLog } from './common/logger';
 import { diagnosticError } from '@erp/logging';
 import { requestLogging } from './common/request-logging';
+import { validateAuthConfiguration } from './auth/crypto';
 
 export async function createApplication() {
+  validateAuthConfiguration();
   const app = await NestFactory.create(AppModule, { bodyParser: false, logger: new NestLogger(), abortOnError: false });
   app.use(requestLogging);
   app.use(helmet());
@@ -19,7 +21,7 @@ export async function createApplication() {
   app.enableShutdownHooks();
   try {
     const result = await app.get(DatabaseService).pool.query('SELECT max(version) AS version FROM erp_schema_migrations');
-    if (result.rows[0].version !== 2) throw new Error('Schema mismatch');
+    if (result.rows[0].version !== 3) throw new Error('Schema mismatch');
   } catch (error) {
     serverLog.error('database.startup_failed', diagnosticError(error));
     await app.close();

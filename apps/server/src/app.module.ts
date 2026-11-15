@@ -5,6 +5,8 @@ import { AuthService } from './auth/auth.service';
 import { AuthGuard } from './auth/auth.guard';
 import { CustomersController } from './customers/customers.controller';
 import { CustomersService } from './customers/customers.service';
+import { AccessController } from './auth/access.controller';
+import { PermissionsGuard } from './auth/permissions.guard';
 
 @Controller('health')
 class HealthController {
@@ -15,7 +17,7 @@ class HealthController {
   }
 }
 @Module({
-  controllers: [HealthController, AuthController, CustomersController],
-  providers: [DatabaseService, AuthService, AuthGuard, CustomersService]
+  controllers: [HealthController, AuthController, CustomersController, AccessController],
+  providers: [DatabaseService, AuthService, AuthGuard, PermissionsGuard, CustomersService]
 })
 export class AppModule {}

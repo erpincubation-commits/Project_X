@@ -10,8 +10,10 @@ const require = createRequire(import.meta.url);
 const root = fileURLToPath(new URL('../', import.meta.url));
 require('../apps/server/dist/config.js');
 const { Pool } = require('pg');
-const { hash } = require('bcryptjs');
 const { migrate } = require('../apps/server/dist/database/migrate.js');
+const { totp } = require('../apps/server/dist/auth/crypto.js');
+process.env.MFA_ENCRYPTION_KEY = '4'.repeat(64);
+process.env.ADMIN_SETUP_TOKEN = '5'.repeat(64);
 const originalUrl = process.env.DATABASE_URL;
 assert.ok(originalUrl, 'Run npm run setup before the desktop smoke test.');
 const schema = `erp_test_${randomUUID().replaceAll('-', '')}`;
@@ -26,7 +28,6 @@ const applications = [];
 let server;
 try {
   await migrate(pool);
-  for (const role of ['admin', 'reader']) await pool.query('INSERT INTO erp_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)', [randomUUID(), `${role}@smoke.test`, await hash('desktop-test-password', 4), role]);
   server = await require('../apps/server/dist/bootstrap.js').createApplication();
   await server.listen(0, '127.0.0.1');
   const serverUrl = await server.getUrl();
@@ -43,16 +44,34 @@ try {
     page.on('pageerror', error => console.error('Renderer error:', error.message));
     await page.getByLabel('Server address').fill(serverUrl);
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
-    await page.getByText('Server connected. You can sign in.', { exact: true }).waitFor();
+    await page.getByText(role === 'admin' ? 'Server connected. Create the initial administrator account.' : 'Server connected. You can sign in.', { exact: true }).waitFor();
     await page.getByLabel('Email', { exact: true }).fill(`${role}@smoke.test`);
     await page.getByLabel('Password', { exact: true }).fill('desktop-test-password');
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    if (role === 'admin') {
+      await page.getByLabel('Administrator setup code', { exact: true }).fill(process.env.ADMIN_SETUP_TOKEN);
+      await page.getByLabel('Confirm password', { exact: true }).fill('desktop-test-password');
+    }
+    await page.getByRole('button', { name: role === 'admin' ? 'Create administrator' : 'Sign in', exact: true }).click();
+    await page.getByRole('heading', { name: 'Set up your authenticator' }).waitFor();
+    const secret = await page.locator('.secret-key').innerText();
+    await page.getByLabel('Verification code', { exact: true }).fill(totp(secret));
+    await page.getByRole('button', { name: 'Verify code', exact: true }).click();
+    await page.getByRole('heading', { name: 'Save your recovery codes' }).waitFor();
+    await page.getByRole('button', { name: 'I have saved my recovery codes', exact: true }).click();
     await page.getByRole('heading', { name: 'Your customers' }).waitFor();
     assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
-    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['connect','createCustomer','getServer','listCustomers','login','logout','openLogs','reportError'].sort());
+    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['connect','createCustomer','getServer','listCustomers','login','logout','openLogs','reportError','setupStatus','setup','verifyMfa','me','revokeSessions','listUsers','createUser','updateUser','listAudit'].sort());
     return page;
   }
   const admin = await client('admin');
+  await admin.getByRole('button', { name: 'Account security and access', exact: true }).click();
+  await admin.getByLabel('New user email', { exact: true }).fill('reader@smoke.test');
+  await admin.getByLabel('Initial password', { exact: true }).fill('desktop-test-password');
+  await admin.getByRole('button', { name: 'Create account', exact: true }).click();
+  await admin.getByRole('cell', { name: 'reader@smoke.test', exact: true }).waitFor();
+  await admin.getByRole('button', { name: 'Refresh audit history', exact: true }).click();
+  await admin.getByRole('cell', { name: 'user.created', exact: true }).waitFor();
+  await admin.getByRole('button', { name: 'Back to workspace', exact: true }).click();
   const reader = await client('reader');
   assert.equal(await reader.getByRole('button', { name: 'Save customer' }).count(), 0);
   await admin.getByLabel('Customer code', { exact: true }).fill('SMOKE-001');
@@ -67,7 +86,7 @@ try {
   await reader.getByRole('button', { name: 'Sign out', exact: true }).click();
   await reader.getByRole('heading', { name: 'Connect to your workspace' }).waitFor();
   assert.equal((await pool.query('SELECT count(*) FROM erp_customers')).rows[0].count, '1');
-  console.log('PASS: two Electron clients, sign-in, admin creation, read-only access, shared PostgreSQL persistence and sign-out.');
+  console.log('PASS: two Electron clients, mandatory MFA enrollment, admin creation, read-only access, shared PostgreSQL persistence and sign-out.');
 } finally {
   for (const application of applications) await application.close();
   if (server) await server.close();

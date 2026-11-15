@@ -12,7 +12,7 @@ npm run db:check
 
 Run in a normal PowerShell terminal under your own Windows account. Windows restricted execution accounts may fail to start `pg_ctl` with a restricted-token error. Keep cluster ownership consistent: use the same Windows account for initialization, startup and shutdown. Set `PG_BIN` in `.env` if auto-detection chooses the wrong installation. The cluster version and binaries must match; upgrades require a tested PostgreSQL upgrade or dump/restore procedure.
 
-The generated root `.env` contains a PostgreSQL connection URL, server port and bootstrap administrator credentials. It is ignored by Git and must be protected. The development cluster is `.local/postgres`, logs are `.local/postgres.log`, and the default port is 5432 on loopback. The database user is a development superuser because initdb creates it as the cluster owner; use separate migration and restricted runtime roles in production.
+The generated root `.env` contains a PostgreSQL connection URL, server port, persistent MFA encryption key and first administrator setup code. It is ignored by Git and must be protected. Use the desktop first-run flow in [authentication setup](AUTHENTICATION.md); legacy bootstrap credentials are optional. The development cluster is `.local/postgres`, logs are `.local/postgres.log`, and the default port is 5432 on loopback. The database user is a development superuser because initdb creates it as the cluster owner; use separate migration and restricted runtime roles in production.
 
 ```powershell
 npm run db:start
@@ -33,7 +33,7 @@ npm run db:check
 npm run db:migrate
 ```
 
-Do not run the native setup command against an existing remote deployment. Migrations need schema creation permissions. If both bootstrap administrator values are set, migration creates that account only if its email is absent; it never changes an existing password or role.
+Do not run the native setup command against an existing remote deployment. Migrations need schema creation permissions. If both legacy bootstrap administrator values are set, migration creates that account only when no users exist; it never changes an existing password or role. Schema version 3 requires persistent authentication keys from `npm run auth:configure` before server startup and invalidates old sessions.
 
 ## Docker alternative
 
@@ -50,7 +50,7 @@ Use either Docker or the native cluster on port 5432. The helper derives Docker 
 
 ## Additional users
 
-The administrator bootstrap credentials are in `.env`. To create another account, set environment variables in a PowerShell session, run the command, then clear them:
+Prefer **Account security and access** in the desktop to provision users. For an authorised offline database operator, set environment variables in a PowerShell session, run the command, then clear them:
 
 ```powershell
 $env:NEW_USER_EMAIL = 'viewer@company.test'
@@ -61,8 +61,8 @@ npm run db:create-user
 Remove-Item Env:NEW_USER_EMAIL, Env:NEW_USER_ROLE, Env:NEW_USER_PASSWORD
 ```
 
-Allowed roles are `admin` and `reader`. Runtime role management and password changes still need implementation. Account provisioning requires database administrator access. Bootstrap passwords can be removed from `.env` after creating accounts; existing accounts remain valid.
+Allowed roles are `admin`, `reader`, `identity_admin` and `auditor`. Desktop role/active management is available with server permissions; user password changes remain future work. Offline account provisioning requires privileged database access. Bootstrap passwords can be removed after account creation; existing accounts remain valid and must enrol MFA.
 
 ## Verification
 
-Run `npm test`, `npm run test:integration` and `npm run test:desktop`. The latter two use temporary test schemas and clean them up. No existing customer rows are changed. An interrupted test may leave an `erp_test_...` schema for an administrator to inspect and remove.
+Run `npm test`, `npm run test:integration` and `npm run test:desktop`. The latter two create and remove a disposable database, with temporary schemas inside it; the development account requires `CREATE DATABASE`. Never use production credentials. An interrupted run may leave an `erp_test_...` database for an administrator to inspect and remove.

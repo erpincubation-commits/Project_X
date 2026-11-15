@@ -3,7 +3,7 @@ import { resolve, sep, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readFile, writeFile } from 'node:fs/promises';
 import { ApiClient, normalizeServer } from './api-client';
-import type { CustomerInput } from '@erp/contracts';
+import { createUserInput, updateUserInput, loginInput, setupInput, type CustomerInput } from '@erp/contracts';
 import { createLogger, diagnosticError } from '@erp/logging';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'erp', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
@@ -63,9 +63,26 @@ async function main() {
     return result;
   });
   handle('auth:login', (input: unknown) => {
-    if (!input || typeof input !== 'object' || !('email' in input) || !('password' in input) || typeof input.email !== 'string' || input.email.length > 254 || typeof input.password !== 'string' || input.password.length > 128) return { ok: false, error: 'Enter your email and password.' };
-    return api.login({ email: input.email, password: input.password });
+    const parsed = loginInput.safeParse(input);
+    if (!parsed.success) return { ok: false, error: 'Enter your email and password.' };
+    return api.login(parsed.data);
   });
+  handle('auth:setup-status', () => api.setupStatus());
+  handle('auth:setup', (input: unknown) => { const parsed = setupInput.safeParse(input); return parsed.success ? api.setup(parsed.data) : { ok: false, error: 'Enter a valid email, setup code and a password of at least 12 characters (at most 72 UTF-8 bytes).' }; });
+  handle('auth:verify-mfa', (input: unknown) => {
+    if (!input || typeof input !== 'object' || !('code' in input) || typeof input.code !== 'string' || input.code.length < 6 || input.code.length > 40) return { ok: false, error: 'Enter an authenticator or recovery code.' };
+    return api.verifyMfa({ code: input.code.trim() });
+  });
+  handle('auth:me', () => api.me());
+  handle('auth:revoke-sessions', () => api.revokeSessions());
+  handle('access:users', () => api.listUsers());
+  handle('access:create-user', (input: unknown) => { const parsed = createUserInput.safeParse(input); return parsed.success ? api.createUser(parsed.data) : { ok: false, error: 'Enter a valid email, role and a password of at least 12 characters (at most 72 UTF-8 bytes).' }; });
+  handle('access:update-user', (id: unknown, input: unknown) => {
+    const parsed = updateUserInput.safeParse(input);
+    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id) || !parsed.success) return { ok: false, error: 'Enter valid account details.' };
+    return api.updateUser(id, parsed.data);
+  });
+  handle('access:audit', (page: unknown) => typeof page === 'number' && Number.isInteger(page) && page > 0 && page <= 100000 ? api.listAudit(page) : { ok: false, error: 'Invalid page number.' });
   handle('auth:logout', () => api.logout());
   handle('customers:list', (page: unknown) => {
     if (typeof page !== 'number' || !Number.isInteger(page) || page < 1 || page > 100000) return { ok: false, error: 'Invalid page number.' };

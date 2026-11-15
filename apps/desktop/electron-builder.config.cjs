@@ -7,7 +7,7 @@ module.exports = {
   executableName: 'SMB ERP',
   directories: { output: '../../release' },
   electronDist: path.resolve(__dirname, '../../node_modules/electron/dist'),
-  files: ['dist/main/**/*', 'dist/renderer/**/*', 'package.json', '!**/*.map'],
+  files: ['dist/main/**/*', 'dist/renderer/**/*', 'package.json', '!**/*.map', '!**/node_modules/zod/src{,/**/*}'],
   asar: true,
   forceCodeSigning: required,
   win: { target: [{ target: 'nsis', arch: ['x64'] }], requestedExecutionLevel: 'asInvoker' },
@@ -22,6 +22,6 @@ module.exports = {
     const entries = listPackage(path.join(context.appOutDir, 'resources/app.asar')).map(entry => entry.replaceAll('\\', '/'));
     const disallowed = entries.find(entry => /(^|\/)(\.env(?:\.[^/]*)?|\.local|server|test|tests)(\/|$)|\.(db|sqlite|sqlite3|pfx|p12|pem|key)$/i.test(entry));
     if (disallowed) throw new Error('Desktop archive contains an unexpected server, test, database, or secret file. Packaging stopped.');
-    if (!entries.includes('/dist/main/main.js') || !entries.includes('/dist/main/preload.js') || !entries.includes('/dist/renderer/index.html') || !entries.includes('/node_modules/@erp/logging/dist/index.js')) throw new Error('Desktop archive is missing a required runtime asset.');
+    if (!entries.includes('/dist/main/main.js') || !entries.includes('/dist/main/preload.js') || !entries.includes('/dist/renderer/index.html') || !entries.includes('/node_modules/@erp/logging/dist/index.js') || !entries.includes('/node_modules/@erp/contracts/dist/index.js')) throw new Error('Desktop archive is missing a required runtime asset.');
   }
 };

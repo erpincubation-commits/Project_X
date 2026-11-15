@@ -1,4 +1,4 @@
-import type { Customer, CustomerInput, CustomerPage, Result, User } from '@erp/contracts';
+import type { Customer, CustomerInput, CustomerPage, Result, User, AuthChallenge, MfaPrompt, SessionResult, SignedIn, SetupStatus, ManagedUser, AuditEvent, Role } from '@erp/contracts';
 import { net } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { diagnosticError } from '@erp/logging';
@@ -14,6 +14,7 @@ export function normalizeServer(value: string): string {
 
 export class ApiClient {
   private token: string | undefined;
+  private challenge: string | undefined;
   constructor(public server: string) { this.server = normalizeServer(server); }
 
   private async request<T>(path: string, method = 'GET', body?: unknown, requestId?: string): Promise<Result<T>> {
@@ -54,16 +55,36 @@ export class ApiClient {
       return result;
     } catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Invalid server address.' }; }
   }
-  async login(input: unknown): Promise<Result<User>> {
-    const result = await this.request<{ token: string; user: User }>('/auth/login', 'POST', input);
+  setupStatus() { return this.request<SetupStatus>('/auth/setup-status'); }
+  private async beginAuth(path: string, input: unknown): Promise<Result<MfaPrompt>> {
+    this.token = undefined; this.challenge = undefined;
+    const result = await this.request<AuthChallenge>(path, 'POST', input);
     if (!result.ok) return result;
-    if (!/^[a-f0-9]{64}$/.test(result.data.token) || !result.data.user?.id) return { ok: false, error: 'The server returned an invalid sign-in response.' };
-    this.token = result.data.token;
-    return { ok: true, data: result.data.user };
+    if (!/^[a-f0-9]{64}$/.test(result.data.challenge) || !result.data.mfaRequired) return { ok: false, error: 'The server returned an invalid sign-in response.' };
+    this.challenge = result.data.challenge;
+    return { ok: true, data: { mfaRequired: true, ...(result.data.enrollment ? { enrollment: result.data.enrollment } : {}) } };
   }
+  login(input: unknown) { return this.beginAuth('/auth/login', input); }
+  setup(input: unknown) { return this.beginAuth('/auth/setup', input); }
+  async verifyMfa(input: { code: string }): Promise<Result<SignedIn>> {
+    if (!this.challenge) return { ok: false, error: 'Sign in again to request a verification challenge.' };
+    const result = await this.request<SessionResult>('/auth/mfa/verify', 'POST', { challenge: this.challenge, code: input.code });
+    if (!result.ok) return result;
+    if (!/^[a-f0-9]{64}$/.test(result.data.token) || !result.data.user?.id || !Array.isArray(result.data.user.permissions)) return { ok: false, error: 'The server returned an invalid session response.' };
+    this.token = result.data.token;
+    this.challenge = undefined;
+    return { ok: true, data: { user: result.data.user, recoveryCodes: result.data.recoveryCodes } };
+  }
+  me() { return this.request<User>('/auth/me'); }
+  async revokeSessions() { const result = await this.request<null>('/auth/revoke-sessions', 'POST'); if (result.ok) this.token = undefined; return result; }
+  listUsers() { return this.request<ManagedUser[]>('/access/users'); }
+  createUser(input: { email: string; password: string; role: Role }) { return this.request<ManagedUser>('/access/users', 'POST', input); }
+  updateUser(id: string, input: { role: Role; active: boolean }) { return this.request<ManagedUser>(`/access/users/${id}`, 'PATCH', input); }
+  listAudit(page: number) { return this.request<{ items: AuditEvent[]; page: number }>(`/access/audit?page=${page}`); }
   async logout(): Promise<Result<null>> {
     const result = this.token ? await this.request<null>('/auth/logout', 'POST') : { ok: true as const, data: null };
     this.token = undefined;
+    this.challenge = undefined;
     return result;
   }
   listCustomers(page: number) { return this.request<CustomerPage>(`/customers?page=${page}`); }

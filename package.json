@@ -15,6 +15,7 @@
     "@electron/asar": "^4.0.0"
   },
   "scripts": {
+    "auth:configure": "node tools/init-env.mjs",
     "setup": "node tools/init-env.mjs && npm run db:setup",
     "build": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run build -w @erp/server && npm run build -w @erp/desktop",
     "build:server": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run build -w @erp/server",
@@ -24,8 +25,8 @@
     "start": "node tools/start.mjs",
     "check": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run check --workspaces --if-present",
     "test": "npm run build:server && npm run test -w @erp/logging && node --test apps/server/test/*.test.cjs",
-    "test:integration": "npm run build:server && node --test apps/server/test/*.integration.cjs",
-    "test:desktop": "npm run build && node tools/desktop-smoke.mjs",
+    "test:integration": "npm run build:server && node tools/isolated-tests.mjs api",
+    "test:desktop": "npm run build && node tools/isolated-tests.mjs desktop",
     "db:setup": "npm run build:server && node apps/server/dist/database/cli.js setup",
     "db:start": "node apps/server/dist/database/cli.js start",
     "db:stop": "node apps/server/dist/database/cli.js stop",

@@ -9,6 +9,7 @@ import { projectRoot, settings } from '../config';
 import { migrate } from './migrate';
 import { serverLog } from '../common/logger';
 import { diagnosticError } from '@erp/logging';
+import { roleInput } from '@erp/contracts';
 
 function run(binary: string, args: string[]) {
   const result = spawnSync(binary, args, { cwd: projectRoot, encoding: 'utf8', windowsHide: true, timeout: 120000 });
@@ -88,10 +89,12 @@ async function createUser(pool: Pool, bootstrap: boolean) {
   const email = z.email().max(254).parse(bootstrap ? process.env.BOOTSTRAP_ADMIN_EMAIL : process.env.NEW_USER_EMAIL).toLowerCase();
   const password = bootstrap ? process.env.BOOTSTRAP_ADMIN_PASSWORD : process.env.NEW_USER_PASSWORD;
   if (!password || password.length < 12 || Buffer.byteLength(password) > 72) throw new Error('User password must contain at least 12 characters and at most 72 UTF-8 bytes.');
-  const role = bootstrap ? 'admin' : z.enum(['admin', 'reader']).parse(process.env.NEW_USER_ROLE || 'reader');
+  const role = bootstrap ? 'admin' : roleInput.parse(process.env.NEW_USER_ROLE || 'reader');
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(83478622)');
+    if (bootstrap && (await client.query('SELECT 1 FROM erp_users LIMIT 1')).rowCount) { await client.query('COMMIT'); console.log('Initial account already exists. No bootstrap changes were made.'); return; }
     const inserted = await client.query('INSERT INTO erp_users(id,email,password_hash,role) VALUES($1,$2,$3,$4) ON CONFLICT(email) DO NOTHING RETURNING id', [randomUUID(), email, await hash(password, 12), role]);
     if (inserted.rowCount) {
       await client.query("INSERT INTO erp_audit_events(actor_id,action,entity_type,entity_id,changes) VALUES($1,'bootstrap','user',$2,$3)", [inserted.rows[0].id, inserted.rows[0].id, JSON.stringify({ email, role })]);
@@ -128,7 +131,7 @@ async function main() {
       await migrate(pool);
       console.log('Database schema is up to date.');
       if (process.env.BOOTSTRAP_ADMIN_EMAIL && process.env.BOOTSTRAP_ADMIN_PASSWORD) await createUser(pool, true);
-      else console.log('Set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD, then run db:migrate to create the first account.');
+      else console.log('Connect with the desktop and use the private ADMIN_SETUP_TOKEN for initial administrator setup.');
     } else if (command === 'create-user') await createUser(pool, false);
     else throw new Error('Unknown database command.');
   } finally { await pool.end(); }

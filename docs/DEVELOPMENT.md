@@ -1,6 +1,6 @@
 ﻿# Development commands and diagnostic logs
 
-Run commands from the repository root after `npm ci` and PostgreSQL setup.
+Run commands from the repository root after `npm ci` and PostgreSQL setup. For existing installations, complete [authentication configuration and schema upgrade](AUTHENTICATION.md) before starting the new server. Integration and desktop tests now create disposable databases and require `CREATE DATABASE` on a development account.
 
 | Command | Behaviour |
 |---|---|

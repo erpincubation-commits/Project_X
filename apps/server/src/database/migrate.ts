@@ -35,6 +35,28 @@ const migrations = [
     $$;
     CREATE TRIGGER erp_audit_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON erp_audit_events
       FOR EACH STATEMENT EXECUTE FUNCTION erp_reject_audit_change();
+  ` },
+  { version: 3, sql: `
+    ALTER TABLE erp_users DROP CONSTRAINT erp_users_role_check;
+    ALTER TABLE erp_users ADD CONSTRAINT erp_users_role_check CHECK (role IN ('admin','reader','identity_admin','auditor'));
+    ALTER TABLE erp_users ADD COLUMN mfa_secret TEXT;
+    ALTER TABLE erp_users ADD COLUMN mfa_last_step BIGINT;
+    ALTER TABLE erp_users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE erp_sessions ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE erp_audit_events ALTER COLUMN actor_id DROP NOT NULL;
+    CREATE INDEX erp_audit_time ON erp_audit_events(occurred_at DESC, id DESC);
+    CREATE TABLE erp_auth_challenges (
+      token_hash TEXT PRIMARY KEY, user_id UUID NOT NULL REFERENCES erp_users(id),
+      enrollment_secret TEXT, auth_version INTEGER NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT now() + interval '5 minutes',
+      attempts INTEGER NOT NULL DEFAULT 0 CHECK(attempts >= 0)
+    );
+    CREATE INDEX erp_auth_challenges_user ON erp_auth_challenges(user_id);
+    CREATE TABLE erp_mfa_recovery_codes (
+      user_id UUID NOT NULL REFERENCES erp_users(id), code_hash TEXT NOT NULL,
+      PRIMARY KEY(user_id, code_hash)
+    );
+    DELETE FROM erp_sessions;
   ` }
 ];
 

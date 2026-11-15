@@ -13,6 +13,8 @@ The detailed roles, permission rules, privacy features and response processes be
 
 ## 2. Current security baseline and gaps
 
+**Implementation update:** Initial administrator setup, mandatory TOTP MFA, recovery codes, session revocation, fixed permissions for four roles, user access management and audit viewing are now implemented. See [authentication](AUTHENTICATION.md) for the exact supported controls and upgrade procedure. The detailed business-role matrix below remains a proposed target; it is not the current four-role registry. The baseline paragraph below records the earlier drafting state.
+
 The repository currently implements named accounts with `admin` and `reader` roles, customer create/list authorisation, password hashing, sessions with idle and absolute expiration, per-account sign-in throttling, input validation, sanitised diagnostic logging, request IDs, a React error boundary and customer-create idempotency. The desktop uses context isolation and a sandboxed renderer; session tokens are held in the main process. Remote connections require HTTPS and certificate validation.
 
 The audit trigger prevents ordinary modification, but a database owner can bypass it. The full role matrix, MFA, user administration, approval controls, production monitoring, automated backup/restore, data-subject request tools and retention controls are **not yet implemented**. Existing Windows installer builds are unsigned unless explicitly signed. Remote HTTPS configuration, database privileges, encryption at rest and backup operations depend on the deployment.

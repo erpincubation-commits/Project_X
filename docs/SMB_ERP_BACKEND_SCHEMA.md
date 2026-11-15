@@ -15,6 +15,8 @@ The first jurisdiction, currency, accounting policy, stock costing and retention
 
 ## 2. Current implementation
 
+**Implementation update:** Migration 3 now expands user roles, adds encrypted MFA fields and authentication versions, invalidates legacy sessions, permits unauthenticated audit actors, and creates `erp_auth_challenges` and `erp_mfa_recovery_codes`. See [the migration source](../apps/server/src/database/migrate.ts) and [authentication](AUTHENTICATION.md). The tables below describe the original migration 1–2 baseline; proposed business-domain tables remain unimplemented.
+
 The authoritative definition is [migrate.ts](../apps/server/src/database/migrate.ts). Migrations 1 and 2 define the following tables; `erp_schema_migrations` records applied versions. The schema shown here is not a substitute for checking the actual database's applied migrations.
 
 | Existing table | Columns and constraints | Purpose |

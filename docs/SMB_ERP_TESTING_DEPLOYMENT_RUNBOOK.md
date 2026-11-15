@@ -8,6 +8,8 @@
 
 ## 1. Purpose and present release status
 
+**Authentication update:** Follow [authentication setup and verification](AUTHENTICATION.md) for current administrator setup, mandatory MFA, role management, migration 3 and test isolation. Integration/desktop test runners now create a disposable database, requiring `CREATE DATABASE`, then create temporary schemas inside it. The older no-MFA login smoke steps and schema-only permission assumptions below must be adapted to the updated flow. Production ERP gates still apply.
+
 This runbook describes how to validate the existing Electron/NestJS/PostgreSQL application, build and test its Windows installer, stage an on-premises deployment and decide whether a release can proceed. It also records the additional testing and operations required for the planned ERP. The product documents are planning inputs; the commands and current capabilities below come from the repository.
 
 **Current application:** Connect, sign in, create a customer as `admin`, view the register as `admin` or `reader`, and refresh from another client. Customer creation includes server validation, audit and retry protection. The full procure-to-pay, accounting, inventory, granular roles and MFA are not implemented.

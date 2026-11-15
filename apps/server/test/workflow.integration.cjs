@@ -5,9 +5,11 @@ const { Pool } = require('pg');
 const { hash } = require('bcryptjs');
 require('../dist/config.js');
 const { migrate } = require('../dist/database/migrate.js');
+const { totp, digest } = require('../dist/auth/crypto.js');
 
 test('shared server workflow: authentication, permissions, persistence, retries and audit', async () => {
   const originalUrl = process.env.DATABASE_URL;
+  process.env.MFA_ENCRYPTION_KEY = '1'.repeat(64);
   assert.ok(originalUrl, 'Configure DATABASE_URL before integration tests.');
   const owner = new Pool({ connectionString: originalUrl, connectionTimeoutMillis: 5000 });
   const schema = `erp_test_${randomUUID().replaceAll('-', '')}`;
@@ -39,7 +41,17 @@ test('shared server workflow: authentication, permissions, persistence, retries 
     assert.equal(tooLarge.status, 413);
     assert.equal((await request('/customers')).status, 401);
     assert.equal((await request('/auth/login', 'POST', { email: 'admin@local.test', password: 'incorrect' })).status, 401);
-    const login = async role => (await request('/auth/login', 'POST', { email: `${role}@local.test`, password: 'integration-password' })).data.token;
+    const recovery = new Map();
+    const login = async role => {
+      const challenge = await request('/auth/login', 'POST', { email: `${role}@local.test`, password: 'integration-password' });
+      assert.equal(challenge.status, 201);
+      assert.equal(challenge.data.token, undefined);
+      const code = challenge.data.enrollment ? totp(challenge.data.enrollment.secret) : recovery.get(role).shift();
+      const verified = await request('/auth/mfa/verify', 'POST', { challenge: challenge.data.challenge, code });
+      assert.equal(verified.status, 201);
+      if (verified.data.recoveryCodes) recovery.set(role, verified.data.recoveryCodes);
+      return verified.data.token;
+    };
     const admin = await login('admin');
     const secondClient = await login('admin');
     const reader = await login('reader');
