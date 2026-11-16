@@ -1,0 +1,122 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { randomUUID, randomBytes } = require('node:crypto');
+const { Pool } = require('pg');
+const { compare } = require('bcryptjs');
+require('../dist/config.js');
+const { migrate } = require('../dist/database/migrate.js');
+const { totp, digest, decryptSecret } = require('../dist/auth/crypto.js');
+
+test('setup, mandatory MFA, recovery, expiry, permissions, account changes and audit', async () => {
+  const originalUrl = process.env.DATABASE_URL;
+  assert.ok(originalUrl, 'Configure a disposable test DATABASE_URL.');
+  process.env.MFA_ENCRYPTION_KEY = '3'.repeat(64);
+  process.env.ADMIN_SETUP_TOKEN = 'a'.repeat(64);
+  const owner = new Pool({ connectionString: originalUrl });
+  const schema = `erp_test_${randomUUID().replaceAll('-', '')}`;
+  const url = new URL(originalUrl); url.searchParams.set('options', `-c search_path=${schema}`);
+  await owner.query(`CREATE SCHEMA "${schema}"`);
+  process.env.DATABASE_URL = url.toString();
+  const pool = new Pool({ connectionString: url.toString() }); let app;
+  try {
+    await migrate(pool); await migrate(pool);
+    app = await require('../dist/bootstrap.js').createApplication(); await app.listen(0, '127.0.0.1');
+    const base = (await app.getUrl()) + '/api/v1';
+    async function request(path, method = 'GET', body, token) {
+      const response = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+      return { status: response.status, data: response.status === 204 ? null : await response.json() };
+    }
+    const password = 'a-secure-test-password';
+    assert.equal((await request('/auth/setup-status')).data.setupRequired, true);
+    assert.equal((await request('/auth/setup', 'POST', { email: 'admin@test.example', password, setupToken: 'b'.repeat(64) })).status, 403);
+    const concurrent = await Promise.all(['admin@test.example','other@test.example'].map(email => request('/auth/setup', 'POST', { email, password, setupToken: process.env.ADMIN_SETUP_TOKEN })));
+    assert.deepEqual(concurrent.map(result => result.status).sort(), [201,409]);
+    const initial = concurrent.find(result => result.status === 201).data;
+    assert.equal(initial.token, undefined);
+    assert.equal((await request('/auth/setup-status')).data.setupRequired, false);
+    assert.equal((await request('/customers', 'GET', undefined, initial.challenge)).status, 401);
+    const account = (await pool.query('SELECT * FROM erp_users')).rows[0];
+    assert.equal(await compare(password, account.password_hash), true);
+    assert.match(account.password_hash, /^\$2[aby]\$12\$/);
+    const step = Math.floor(Date.now()/30000);
+    const acceptedCodes = [step-1,step,step+1].map(value=>totp(initial.enrollment.secret,value));
+    const wrong = Array.from({length:10},(_,index)=>String(index).padStart(6,'0')).find(value=>!acceptedCodes.includes(value));
+    const incorrect = await request('/auth/mfa/verify', 'POST', { challenge: initial.challenge, code: wrong });
+    assert.equal(incorrect.status, 401); assert.match(incorrect.data.message, /code did not match/i);
+    const enrollmentCode = totp(initial.enrollment.secret);
+    const enabled = await request('/auth/mfa/verify', 'POST', { challenge: initial.challenge, code: enrollmentCode });
+    assert.equal(enabled.status, 201); assert.equal(enabled.data.recoveryCodes.length, 8);
+    const admin = enabled.data.token;
+    assert.ok(enabled.data.user.permissions.includes('users.manage'));
+    const stored = (await pool.query('SELECT * FROM erp_users WHERE id=$1',[account.id])).rows[0];
+    assert.notEqual(stored.mfa_secret, initial.enrollment.secret);
+    assert.equal(decryptSecret(stored.mfa_secret, account.id), initial.enrollment.secret);
+    assert.notEqual((await pool.query('SELECT token_hash FROM erp_sessions')).rows[0].token_hash, admin);
+    assert.equal((await request('/auth/mfa/verify', 'POST', { challenge: initial.challenge, code: totp(initial.enrollment.secret) })).status, 401);
+    const login = async email => (await request('/auth/login','POST',{ email, password })).data;
+    const again = await login(account.email);
+    assert.equal(again.enrollment, undefined);
+    assert.equal((await request('/auth/mfa/verify','POST',{challenge:again.challenge,code:enrollmentCode})).status,401);
+    const recovered = await request('/auth/mfa/verify','POST',{challenge:again.challenge,code:enabled.data.recoveryCodes[0]});
+    assert.equal(recovered.status,201);
+    const next = await login(account.email);
+    assert.equal((await request('/auth/mfa/verify','POST',{challenge:next.challenge,code:enabled.data.recoveryCodes[0]})).status,401);
+    // A challenge has a bounded attempt count and a separate absolute expiry.
+    await pool.query('UPDATE erp_auth_challenges SET expires_at=now()-interval \'1 second\' WHERE token_hash=$1',[digest(next.challenge)]);
+    const expired = await request('/auth/mfa/verify','POST',{challenge:next.challenge,code:enabled.data.recoveryCodes[1]});
+    assert.equal(expired.status,401); assert.match(expired.data.message,/expired/i);
+    const locked = await login(account.email);
+    for(let i=0;i<5;i++) assert.equal((await request('/auth/mfa/verify','POST',{challenge:locked.challenge,code:'invalid'})).status,401);
+    const exhausted = await request('/auth/mfa/verify','POST',{challenge:locked.challenge,code:enabled.data.recoveryCodes[1]});
+    assert.equal(exhausted.status,401); assert.match(exhausted.data.message,/too many codes/i);
+    const created = await request('/access/users','POST',{email:'reader@test.example', password, role:'reader'},admin);
+    assert.equal(created.status,201); assert.equal(created.data.mfaEnabled,false); assert.equal(created.data.password_hash,undefined);
+    const readerPrompt = await login('reader@test.example');
+    const readerSession = await request('/auth/mfa/verify','POST',{challenge:readerPrompt.challenge,code:totp(readerPrompt.enrollment.secret)});
+    const reader = readerSession.data.token;
+    assert.equal((await request('/access/users','GET',undefined,reader)).status,403);
+    assert.equal((await request('/access/audit','GET',undefined,reader)).status,403);
+    assert.equal((await request('/customers','GET',undefined,reader)).status,200);
+    const disabled = await request('/access/users/'+created.data.id,'PATCH',{role:'reader',active:false},admin);
+    assert.equal(disabled.status,200);
+    assert.equal((await request('/auth/me','GET',undefined,reader)).status,401);
+    assert.equal((await request('/auth/login','POST',{email:'reader@test.example',password})).status,401);
+    assert.equal((await request('/access/users/'+account.id,'PATCH',{role:'reader',active:false},admin)).status,403);
+    for (const role of ['identity_admin','auditor']) {
+      const email = `${role}@test.example`;
+      assert.equal((await request('/access/users','POST',{email,password,role},admin)).status,201);
+      const prompt = await login(email);
+      const session = await request('/auth/mfa/verify','POST',{challenge:prompt.challenge,code:totp(prompt.enrollment.secret)});
+      assert.equal(session.status,201);
+      const token = session.data.token;
+      assert.equal((await request('/customers','GET',undefined,token)).status,role==='auditor'?200:403);
+      assert.equal((await request('/access/audit','GET',undefined,token)).status,role==='auditor'?200:403);
+      assert.equal((await request('/access/users','GET',undefined,token)).status,role==='identity_admin'?200:403);
+      assert.equal((await request('/access/users','POST',{email:`elevated-${role}@test.example`,password,role:'admin'},token)).status,403);
+      if(role==='identity_admin') assert.equal((await request('/access/users','POST',{email:'provisioned-reader@test.example',password,role:'reader'},token)).status,201);
+    }
+    await pool.query("UPDATE erp_sessions SET expires_at=now()-interval '1 second' WHERE token_hash=$1",[digest(recovered.data.token)]);
+    assert.equal((await request('/auth/me','GET',undefined,recovered.data.token)).status,401);
+    await pool.query("UPDATE erp_sessions SET last_seen_at=now()-interval '31 minutes' WHERE token_hash=$1",[digest(admin)]);
+    assert.equal((await request('/auth/me','GET',undefined,admin)).status,401);
+    // A fresh recovery login remains possible; revoke invalidates all sessions and challenges.
+    const fresh = await login(account.email);
+    const freshSession = await request('/auth/mfa/verify','POST',{challenge:fresh.challenge,code:enabled.data.recoveryCodes[1]});
+    assert.equal(freshSession.status,201);
+    const finalToken = freshSession.data.token;
+    const raceA = await login(account.email), raceB = await login(account.email);
+    const recoveryRace = await Promise.all([raceA,raceB].map(prompt=>request('/auth/mfa/verify','POST',{challenge:prompt.challenge,code:enabled.data.recoveryCodes[2]})));
+    assert.deepEqual(recoveryRace.map(result=>result.status).sort(),[201,401]);
+    const audit = await request('/access/audit','GET',undefined,finalToken); assert.equal(audit.status,200);
+    const serial = JSON.stringify((await pool.query('SELECT * FROM erp_audit_events')).rows);
+    for(const secret of [password, initial.enrollment.secret, finalToken, ...enabled.data.recoveryCodes]) assert.ok(!serial.includes(secret));
+    for(const action of ['setup.denied','setup.completed','mfa.enabled','mfa.verification_failed','mfa.recovery_used','access.denied','user.created','user.access_changed']) assert.ok(serial.includes(action),action);
+    await assert.rejects(()=>pool.query("DELETE FROM erp_audit_events"));
+    assert.equal((await request('/auth/revoke-sessions','POST',undefined,finalToken)).status,204);
+    assert.equal((await request('/auth/me','GET',undefined,finalToken)).status,401);
+    assert.equal((await request('/auth/me','GET',undefined,recoveryRace.find(result=>result.status===201).data.token)).status,401);
+  } finally {
+    if(app) await app.close(); await pool.end(); process.env.DATABASE_URL=originalUrl;
+    await owner.query(`DROP SCHEMA "${schema}" CASCADE`); await owner.end();
+  }
+});

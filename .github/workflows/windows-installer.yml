@@ -1,0 +1,104 @@
+name: Windows installer
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      sign_release:
+        description: Require signing with the configured Windows certificate
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: erp_ci
+          POSTGRES_USER: erp_ci
+          POSTGRES_PASSWORD: ci-ephemeral-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U erp_ci -d erp_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://erp_ci:ci-ephemeral-only@127.0.0.1:5432/erp_ci
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run auth:configure
+      - run: npm run build
+      - run: npm run check
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run security:check
+      - run: npm run security:dependencies
+      - name: Rehearse encrypted database recovery
+        run: npm run test:recovery
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+      - run: npm run test:load
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: server-verification-reports
+          path: .local/load-report.json
+          if-no-files-found: warn
+          retention-days: 14
+  windows-installer:
+    needs: validate
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://erp_ci:ephemeral-ci-only@127.0.0.1:5432/erp_ci
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Prepare isolated Windows development cluster
+        run: npm run setup
+      - name: Verify desktop workflows and accessibility
+        run: npm run test:desktop
+      - name: Build NSIS installer
+        run: npm run package:windows
+        env:
+          ERP_REQUIRE_SIGNING: ${{ github.event_name == 'workflow_dispatch' && inputs.sign_release && 'true' || 'false' }}
+          WIN_CSC_LINK: ${{ github.event_name == 'workflow_dispatch' && inputs.sign_release && secrets.WIN_CSC_LINK || '' }}
+          WIN_CSC_KEY_PASSWORD: ${{ github.event_name == 'workflow_dispatch' && inputs.sign_release && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+      - name: Launch the packaged application
+        run: npm run test:packaged
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-accessibility-reports
+          path: .local/accessibility/*.json
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@v7
+        with:
+          name: smb-erp-windows-installer
+          path: |
+            release/*-setup.exe
+            release/*.sha256
+          if-no-files-found: error
+          retention-days: 14

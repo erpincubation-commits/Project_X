@@ -1,0 +1,59 @@
+{
+  "name": "smb-erp",
+  "version": "0.2.0",
+  "private": true,
+  "description": "On-premises ERP desktop and application server",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "@electron/asar": "^4.0.0",
+    "axe-core": "^4.14.0",
+    "playwright-core": "^1.0.0"
+  },
+  "scripts": {
+    "auth:configure": "node tools/init-env.mjs",
+    "setup": "node tools/init-env.mjs && npm run db:setup",
+    "build": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run build -w @erp/server && npm run build -w @erp/desktop",
+    "build:server": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run build -w @erp/server",
+    "build:desktop": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run build -w @erp/desktop",
+    "server": "npm run start -w @erp/server",
+    "desktop": "npm run start -w @erp/desktop",
+    "start": "node tools/start.mjs",
+    "check": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run check --workspaces --if-present",
+    "test": "npm run build:server && npm run test -w @erp/logging && node --test apps/server/test/*.test.cjs",
+    "test:integration": "npm run build:server && node tools/isolated-tests.mjs api",
+    "test:desktop": "npm run build && node tools/isolated-tests.mjs desktop",
+    "db:setup": "npm run build:server && node apps/server/dist/database/cli.js setup",
+    "db:start": "node apps/server/dist/database/cli.js start",
+    "db:stop": "node apps/server/dist/database/cli.js stop",
+    "db:check": "node apps/server/dist/database/cli.js check",
+    "db:migrate": "node apps/server/dist/database/cli.js migrate",
+    "db:docker": "node apps/server/dist/database/cli.js docker",
+    "db:create-user": "node apps/server/dist/database/cli.js create-user",
+    "package:windows": "npm run build:desktop && node tools/package-windows.mjs",
+    "dev": "node tools/dev.mjs",
+    "dev:server": "node tools/dev.mjs server",
+    "dev:desktop": "node tools/dev.mjs desktop",
+    "package:windows:dir": "npm run build:desktop && node tools/package-windows.mjs --dir",
+    "test:packaged": "node tools/packaged-smoke.mjs",
+    "db:status": "node apps/server/dist/database/cli.js migration-status",
+    "db:dry-run": "node apps/server/dist/database/cli.js migration-dry-run",
+    "backup:key": "node tools/recovery.mjs key",
+    "db:backup": "node tools/recovery.mjs backup",
+    "db:restore": "node tools/recovery.mjs restore",
+    "ops:cleanup": "node tools/maintenance.mjs",
+    "security:check": "node tools/security-check.mjs",
+    "security:dependencies": "npm audit --omit=dev --audit-level=high --cache .npm-cache",
+    "test:load": "npm run build:server && node tools/load-test.mjs",
+    "test:recovery": "npm run build:server && node tools/recovery-test.mjs",
+    "test:accessibility": "npm run build && node tools/isolated-tests.mjs accessibility"
+  },
+  "overrides": {
+    "minimatch@>=7 <11.0.1": "^11.0.8"
+  }
+}
