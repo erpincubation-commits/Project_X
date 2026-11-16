@@ -4,6 +4,9 @@ import { pathToFileURL } from 'node:url';
 import { readFile, writeFile } from 'node:fs/promises';
 import { ApiClient, normalizeServer } from './api-client';
 import { registerProcurementIPC } from './procurement-ipc';
+import { registerBooksIPC } from './books-ipc';
+import { registerOperationsIPC } from './operations-ipc';
+import { registerTradeIPC } from './trade-ipc';
 import { createUserInput, updateUserInput, loginInput, setupInput, type CustomerInput } from '@erp/contracts';
 import { createLogger, diagnosticError } from '@erp/logging';
 
@@ -54,6 +57,9 @@ async function main() {
   catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') log.warn('connection.config_invalid', diagnosticError(error)); }
   const api = new ApiClient(server);
   registerProcurementIPC(handle,api);
+  registerBooksIPC(handle,api);
+  registerTradeIPC(handle,api);
+  registerOperationsIPC(handle,api);
   handle('server:get', () => api.server);
   handle('server:connect', async (value: unknown) => {
     if (typeof value !== 'string' || value.length > 2048) return { ok: false, error: 'Enter a valid server address.' };

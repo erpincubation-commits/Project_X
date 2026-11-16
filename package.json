@@ -11,8 +11,9 @@
     "node": ">=22.12.0"
   },
   "devDependencies": {
-    "playwright-core": "^1.0.0",
-    "@electron/asar": "^4.0.0"
+    "@electron/asar": "^4.0.0",
+    "axe-core": "^4.14.0",
+    "playwright-core": "^1.0.0"
   },
   "scripts": {
     "auth:configure": "node tools/init-env.mjs",
@@ -39,6 +40,20 @@
     "dev:server": "node tools/dev.mjs server",
     "dev:desktop": "node tools/dev.mjs desktop",
     "package:windows:dir": "npm run build:desktop && node tools/package-windows.mjs --dir",
-    "test:packaged": "node tools/packaged-smoke.mjs"
+    "test:packaged": "node tools/packaged-smoke.mjs",
+    "db:status": "node apps/server/dist/database/cli.js migration-status",
+    "db:dry-run": "node apps/server/dist/database/cli.js migration-dry-run",
+    "backup:key": "node tools/recovery.mjs key",
+    "db:backup": "node tools/recovery.mjs backup",
+    "db:restore": "node tools/recovery.mjs restore",
+    "ops:cleanup": "node tools/maintenance.mjs",
+    "security:check": "node tools/security-check.mjs",
+    "security:dependencies": "npm audit --omit=dev --audit-level=high --cache .npm-cache",
+    "test:load": "npm run build:server && node tools/load-test.mjs",
+    "test:recovery": "npm run build:server && node tools/recovery-test.mjs",
+    "test:accessibility": "npm run build && node tools/isolated-tests.mjs accessibility"
+  },
+  "overrides": {
+    "minimatch@>=7 <11.0.1": "^11.0.8"
   }
 }

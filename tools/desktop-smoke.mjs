@@ -1,4 +1,8 @@
+import {operationsDesktopFlow} from './operations-desktop-flow.mjs';
+import {verifyAccessibility} from './accessibility.mjs';
 import assert from 'node:assert/strict';
+import { booksDesktopFlow } from './books-desktop-flow.mjs';
+import { tradeDesktopFlow } from './trade-desktop-flow.mjs';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
@@ -33,19 +37,21 @@ try {
   const serverUrl = await server.getUrl();
   const profileRoot = resolve(root, '.local', schema);
   await mkdir(profileRoot, { recursive: true });
-  async function client(role) {
-    const profile = resolve(profileRoot, role);
+  async function client(role, accountName=role) {
+    const profile = resolve(profileRoot, accountName);
     await mkdir(profile, { recursive: true });
     const env = { ...process.env, ERP_SMOKE_PROFILE: profile };
     delete env.ELECTRON_RUN_AS_NODE;
     const application = await _electron.launch({ executablePath: require('electron'), args: [resolve(root, 'apps/desktop')], env, timeout: 30000 });
     applications.push(application);
     const page = await application.firstWindow();
+    page.setDefaultTimeout(20000);
     page.on('pageerror', error => console.error('Renderer error:', error.message));
+    if(role==='admin') await verifyAccessibility(page,'connection',root);
     await page.getByLabel('Server address').fill(serverUrl);
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
     await page.getByText(role === 'admin' ? 'Server connected. Create the initial administrator account.' : 'Server connected. You can sign in.', { exact: true }).waitFor();
-    await page.getByLabel('Email', { exact: true }).fill(`${role}@smoke.test`);
+    await page.getByLabel('Email', { exact: true }).fill(`${accountName}@smoke.test`);
     await page.getByLabel('Password', { exact: true }).fill('desktop-test-password');
     if (role === 'admin') {
       await page.getByLabel('Administrator setup code', { exact: true }).fill(process.env.ADMIN_SETUP_TOKEN);
@@ -53,17 +59,22 @@ try {
     }
     await page.getByRole('button', { name: role === 'admin' ? 'Create administrator' : 'Sign in', exact: true }).click();
     await page.getByRole('heading', { name: 'Set up your authenticator' }).waitFor();
+    if(role==='admin') await verifyAccessibility(page,'mfa-enrolment',root);
     const secret = await page.locator('.secret-key').innerText();
     await page.getByLabel('Verification code', { exact: true }).fill(totp(secret));
     await page.getByRole('button', { name: 'Verify code', exact: true }).click();
     await page.getByRole('heading', { name: 'Save your recovery codes' }).waitFor();
     await page.getByRole('button', { name: 'I have saved my recovery codes', exact: true }).click();
-    await page.getByRole('heading', { name: role==='business_approver'?'Purchasing workspace':'Your customers' }).waitFor();
+    await page.getByRole('heading', { name: ['accountant','inventory_manager'].includes(role)?'Accounting & stock':['business_approver','purchasing'].includes(role)?'Purchasing workspace':'Your customers' }).waitFor();
     assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
-    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['connect','createCustomer','getServer','listCustomers','login','logout','openLogs','reportError','setupStatus','setup','verifyMfa','me','revokeSessions','listUsers','createUser','updateUser','listAudit','listSuppliers','createSupplier','updateSupplier','listItems','createItem','updateItem','listPurchaseRequests','getPurchaseRequest','createPurchaseRequest','updatePurchaseRequest','submitPurchaseRequest','decidePurchaseRequest','listApprovers','recordHistory'].sort());
+    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['connect','createCustomer','getServer','listCustomers','login','logout','openLogs','reportError','setupStatus','setup','verifyMfa','me','revokeSessions','listUsers','createUser','updateUser','listAudit','listSuppliers','createSupplier','updateSupplier','listItems','createItem','updateItem','listPurchaseRequests','getPurchaseRequest','createPurchaseRequest','updatePurchaseRequest','submitPurchaseRequest','decidePurchaseRequest','listApprovers','recordHistory','booksOverview','setupBooks','createAccount','updateAccount','createPeriod','setPeriodState','listJournals','getJournal','createJournal','updateJournal','postJournal','reverseJournal','createWarehouse','updateWarehouse','listStockMovements','postStockMovement','stockReconciliation','trialBalance','listBankReconciliations','getBankReconciliation','createBankReconciliation','updateBankReconciliation','matchBankLine','finaliseBankReconciliation','booksHistory','listTaxCodes','createTaxCode','updateTaxCode','listOrders','getOrder','createOrder','cancelOrder','listReceipts','getReceipt','createReceipt','listSupplierInvoices','getSupplierInvoice','createSupplierInvoice','updateSupplierInvoice','matchSupplierInvoice','resolveSupplierInvoice','postSupplierInvoice','listCustomerInvoices','getCustomerInvoice','createCustomerInvoice','updateCustomerInvoice','postCustomerInvoice','voidInvoice','listPayments','getPayment','createPayment','updatePayment','submitPayment','decidePayment','executePayment','cancelPayment','paymentApprovers','listCollections','createCollection','subledgerReport','financialStatements','tradeHistory','listOrderReceipts','previewImport','commitImport','listPrivacyCases','createPrivacyCase','privacyAction','exportPrivacyCase'].sort());
     return page;
   }
   const admin = await client('admin');
+  await verifyAccessibility(admin,'customers',root);
+  if(process.env.ERP_ACCESSIBILITY_ONLY==='1') {
+    await operationsDesktopFlow({admin,pool,root});
+  } else {
   await admin.getByRole('button', { name: 'Account security and access', exact: true }).click();
   await admin.getByLabel('New user email', { exact: true }).fill('reader@smoke.test');
   await admin.getByLabel('Initial password', { exact: true }).fill('desktop-test-password');
@@ -140,7 +151,12 @@ try {
   await reader.getByRole('button', { name: 'Sign out', exact: true }).click();
   await reader.getByRole('heading', { name: 'Connect to your workspace' }).waitFor();
   assert.equal((await pool.query('SELECT count(*) FROM erp_customers')).rows[0].count, '1');
-  console.log('PASS: MFA, shared customers, supplier/item masters and independent request rejection, revision, approval and history across three Electron clients.');
+  const {accountant,warehouse}=await booksDesktopFlow({admin,client,pool,root,applications});
+  await tradeDesktopFlow({admin,approver,accountant,warehouse,client,pool,root,applications});
+  await verifyAccessibility(accountant,'financial-statements',root);
+  await operationsDesktopFlow({admin,pool,root});
+  console.log('PASS: multi-role Electron authentication, purchasing, accounting, inventory, trade, operations and accessibility workflows.');
+  }
 } finally {
   for (const application of applications) await application.close();
   if (server) await server.close();

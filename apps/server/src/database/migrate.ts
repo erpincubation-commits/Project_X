@@ -1,6 +1,10 @@
+import { createHash } from 'node:crypto';
+import { operationsMigration } from './operations-migration';
 import type { Pool } from 'pg';
+import { booksMigration } from './books-migration';
+import { tradeMigration } from './trade-migration';
 
-const migrations = [
+export const migrations = [
   { version: 1, sql: `CREATE TABLE IF NOT EXISTS erp_customers (
     code VARCHAR(32) PRIMARY KEY, name VARCHAR(160) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -112,23 +116,45 @@ const migrations = [
       actor_id UUID NOT NULL REFERENCES erp_users(id), request_id UUID NOT NULL, operation TEXT NOT NULL,
       payload JSONB NOT NULL, response JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY(actor_id,request_id)
     );
-  ` }
+  ` }, booksMigration, tradeMigration, operationsMigration
 ];
 
-export async function migrate(pool: Pool) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    await client.query('SELECT pg_advisory_xact_lock(83478621)');
-    await client.query('CREATE TABLE IF NOT EXISTS erp_schema_migrations (version INTEGER PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())');
-    const applied = new Set((await client.query<{ version: number }>('SELECT version FROM erp_schema_migrations')).rows.map(row => row.version));
-    if ([...applied].some(version => !migrations.some(migration => migration.version === version))) throw new Error('The database schema is newer than this application.');
-    for (const migration of migrations) {
-      if (applied.has(migration.version)) continue;
-      await client.query(migration.sql);
-      await client.query('INSERT INTO erp_schema_migrations(version) VALUES($1)', [migration.version]);
-    }
-    await client.query('COMMIT');
-  } catch (error) { await client.query('ROLLBACK'); throw error; }
-  finally { client.release(); }
+export const migrationChecksum=(sql:string)=>createHash('sha256').update(sql.replaceAll('\r\n','\n')).digest('hex');
+export async function migrationStatus(pool:Pool) {
+ const client=await pool.connect();
+ try {
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+  const exists=(await client.query("SELECT to_regclass('erp_schema_migrations') IS NOT NULL AS exists")).rows[0].exists;
+  const hasChecksum=exists && (await client.query("SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='erp_schema_migrations' AND column_name='checksum'")).rowCount;
+  const rows=exists?(await client.query(`SELECT version,applied_at,${hasChecksum?'checksum':'NULL::text AS checksum'} FROM erp_schema_migrations ORDER BY version`)).rows:[];
+  validateVersions(rows);
+  await client.query('COMMIT');
+  return migrations.map(m=>{const r=rows.find(r=>r.version===m.version);return {version:m.version,state:r?'applied':'pending',checksum:migrationChecksum(m.sql),verified:!!r?.checksum,appliedAt:r?.applied_at||null};});
+ }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+}
+function validateVersions(rows:{version:number;checksum?:string|null}[]) {
+ rows.forEach((row,i)=>{
+  const m=migrations[i];
+  if(!m || m.version!==row.version) throw new Error('Migration history has a gap or an unknown version. Stop and investigate with the database administrator.');
+  if(row.checksum && row.checksum!==migrationChecksum(m.sql)) throw new Error(`Migration ${row.version} checksum mismatch. Restore the matching release; do not edit applied migrations.`);
+ });
+}
+export async function migrate(pool: Pool,options:{dryRun?:boolean}={}) {
+ const client=await pool.connect();
+ try {
+  await client.query('BEGIN');
+  await client.query("SET LOCAL lock_timeout='10s'");
+  await client.query('SELECT pg_advisory_xact_lock(83478621)');
+  await client.query('CREATE TABLE IF NOT EXISTS erp_schema_migrations (version INTEGER PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now(), checksum TEXT)');
+  await client.query('ALTER TABLE erp_schema_migrations ADD COLUMN IF NOT EXISTS checksum TEXT');
+  const rows=(await client.query('SELECT version,checksum FROM erp_schema_migrations ORDER BY version')).rows;
+  validateVersions(rows);
+  const applied=new Set(rows.map(r=>r.version)),pending:number[]=[];
+  for(const m of migrations) {
+   if(!applied.has(m.version)) {await client.query(m.sql);await client.query('INSERT INTO erp_schema_migrations(version,checksum) VALUES($1,$2)',[m.version,migrationChecksum(m.sql)]);pending.push(m.version);}
+   else await client.query('UPDATE erp_schema_migrations SET checksum=$2 WHERE version=$1 AND checksum IS NULL',[m.version,migrationChecksum(m.sql)]);
+  }
+  await client.query(options.dryRun?'ROLLBACK':'COMMIT');
+  return {dryRun:!!options.dryRun,pending,baselineEstablished:rows.some(r=>!r.checksum)};
+ }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
 }

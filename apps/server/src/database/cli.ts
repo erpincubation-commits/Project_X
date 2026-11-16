@@ -6,7 +6,7 @@ import { hash } from 'bcryptjs';
 import { Pool } from 'pg';
 import { z } from 'zod';
 import { projectRoot, settings } from '../config';
-import { migrate } from './migrate';
+import { migrate, migrationStatus } from './migrate';
 import { serverLog } from '../common/logger';
 import { diagnosticError } from '@erp/logging';
 import { roleInput } from '@erp/contracts';
@@ -124,7 +124,9 @@ async function main() {
   }
   const pool = new Pool({ connectionString: settings().databaseUrl, connectionTimeoutMillis: 5000 });
   try {
-    if (command === 'check') {
+    if(command==='migration-status') console.log(JSON.stringify(await migrationStatus(pool),null,2));
+    else if(command==='migration-dry-run') console.log(JSON.stringify(await migrate(pool,{dryRun:true}),null,2));
+    else if (command === 'check') {
       const result = await pool.query('SELECT current_database() AS database, version()');
       console.log(`Connected to ${result.rows[0].database}. ${result.rows[0].version.split(',')[0]}`);
     } else if (command === 'setup' || command === 'migrate') {

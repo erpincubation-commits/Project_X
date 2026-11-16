@@ -14,6 +14,8 @@ try {
   await page.getByRole('heading', { name: 'Connect to your workspace' }).waitFor();
   assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
   assert.equal(await page.evaluate(() => typeof window.erp.connect), 'function');
+  assert.equal(await page.evaluate(() => typeof window.erp.previewImport), 'function');
+  assert.equal(await page.evaluate(() => typeof window.erp.listPrivacyCases), 'function');
   assert.equal(await application.evaluate(({ app }) => app.isPackaged), true);
   console.log('PASS: packaged desktop starts with bundled assets, an isolated preload and a sandboxed renderer.');
 } finally { if (application) await application.close(); }

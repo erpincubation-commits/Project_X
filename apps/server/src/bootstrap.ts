@@ -15,13 +15,14 @@ export async function createApplication() {
   const app = await NestFactory.create(AppModule, { bodyParser: false, logger: new NestLogger(), abortOnError: false });
   app.use(requestLogging);
   app.use(helmet());
+  app.use(['/api/v1/books','/api/v1/trade','/api/v1/operations'],json({ limit: '128kb' }));
   app.use(json({ limit: '16kb' }));
   app.setGlobalPrefix('api/v1');
   app.useGlobalFilters(new ErrorFilter());
   app.enableShutdownHooks();
   try {
     const result = await app.get(DatabaseService).pool.query('SELECT max(version) AS version FROM erp_schema_migrations');
-    if (result.rows[0].version !== 4) throw new Error('Schema mismatch');
+    if (result.rows[0].version !== 7) throw new Error('Schema mismatch');
   } catch (error) {
     serverLog.error('database.startup_failed', diagnosticError(error));
     await app.close();

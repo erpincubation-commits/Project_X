@@ -43,7 +43,8 @@ test('setup, mandatory MFA, recovery, expiry, permissions, account changes and a
     const wrong = Array.from({length:10},(_,index)=>String(index).padStart(6,'0')).find(value=>!acceptedCodes.includes(value));
     const incorrect = await request('/auth/mfa/verify', 'POST', { challenge: initial.challenge, code: wrong });
     assert.equal(incorrect.status, 401); assert.match(incorrect.data.message, /code did not match/i);
-    const enabled = await request('/auth/mfa/verify', 'POST', { challenge: initial.challenge, code: totp(initial.enrollment.secret) });
+    const enrollmentCode = totp(initial.enrollment.secret);
+    const enabled = await request('/auth/mfa/verify', 'POST', { challenge: initial.challenge, code: enrollmentCode });
     assert.equal(enabled.status, 201); assert.equal(enabled.data.recoveryCodes.length, 8);
     const admin = enabled.data.token;
     assert.ok(enabled.data.user.permissions.includes('users.manage'));
@@ -55,7 +56,7 @@ test('setup, mandatory MFA, recovery, expiry, permissions, account changes and a
     const login = async email => (await request('/auth/login','POST',{ email, password })).data;
     const again = await login(account.email);
     assert.equal(again.enrollment, undefined);
-    assert.equal((await request('/auth/mfa/verify','POST',{challenge:again.challenge,code:totp(initial.enrollment.secret)})).status,401);
+    assert.equal((await request('/auth/mfa/verify','POST',{challenge:again.challenge,code:enrollmentCode})).status,401);
     const recovered = await request('/auth/mfa/verify','POST',{challenge:again.challenge,code:enabled.data.recoveryCodes[0]});
     assert.equal(recovered.status,201);
     const next = await login(account.email);

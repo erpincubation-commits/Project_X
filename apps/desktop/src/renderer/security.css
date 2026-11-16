@@ -1,4 +1,4 @@
 .secret-key{display:block;overflow-wrap:anywhere;padding:16px;margin:12px 0;background:#edf4ef;border:1px solid #baccc0;border-radius:6px;font-size:16px;user-select:all}
 .security-panel select{font:inherit;display:block;padding:10px;border:1px solid #b6c8bd;border-radius:6px;background:#fff;color:#243a2d;max-width:100%;margin-bottom:16px}
-.security-panel button{margin:8px 8px 8px 0}.security-panel h2{margin-top:24px}.security-panel form{max-width:520px}.security-panel select:focus-visible{outline:3px solid #8eb6a3;outline-offset:2px}
+.security-panel button{margin:8px 8px 8px 0}.security-panel h2{margin-top:24px}.security-panel form{max-width:520px}.security-panel select:focus-visible{outline:3px solid #24503c;outline-offset:2px}
 .table-scroll{overflow-x:auto}.table-scroll caption{text-align:left;padding:12px 0;font-weight:600}.recovery-panel{margin-top:24px}.recovery-panel code{user-select:all;overflow-wrap:anywhere}.recovery-panel li{margin:10px 0}.setup-grid form button{margin-right:8px}

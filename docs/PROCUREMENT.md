@@ -9,7 +9,7 @@ npm run db:migrate
 npm start
 ```
 
-Migration **4** adds supplier/item masters, request headers/lines, immutable history, procurement retry records and new role values. It preserves existing customers, users and MFA configuration. Update client and server together; the new server requires schema version 4. The code change alone does not migrate the main database.
+Migration **4** adds supplier/item masters, request headers/lines, immutable history, procurement retry records and new role values. It preserves existing customers, users and MFA configuration. Update client and server together; the current server requires schema version 6 (see [accounting/inventory](ACCOUNTING_INVENTORY.md)). See [orders and invoice workflows](TRADE_WORKFLOWS.md) for the implemented downstream processes. The code change alone does not migrate the main database.
 
 ## Roles
 

@@ -83,14 +83,18 @@ export class ProcurementService {
   }
   async updateMaster(kind: MasterKind, user: User, id: string, input: SupplierUpdateInput | ItemUpdateInput, key: string) {
     return this.write(user,key,`${kind}.update:${id}`,input,'masters.manage',async client => {
-      const before = (await client.query(`SELECT version FROM ${this.table(kind)} WHERE id=$1 FOR UPDATE`,[id])).rows[0];
+      const before = (await client.query(`SELECT version${kind==='supplier'?',privacy_restricted':''} FROM ${this.table(kind)} WHERE id=$1 FOR UPDATE`,[id])).rows[0];
       if (!before) throw new NotFoundException('Record not found.');
+      if (input.active && before.privacy_restricted) throw new ConflictException('Release the supplier privacy restriction before reactivating it.');
       if (before.version !== input.version) throw new ConflictException('This record was changed by another user. Refresh it before editing.');
       if (kind === 'supplier') {
         const value = input as SupplierUpdateInput;
         await client.query('UPDATE erp_suppliers SET name=$2,contact_email=$3,phone=$4,payment_terms_days=$5,active=$6,version=version+1,updated_at=now(),updated_by=$7 WHERE id=$1',[id,value.name,value.contactEmail,value.phone,value.paymentTermsDays,value.active,user.id]);
       } else {
         const value = input as ItemUpdateInput;
+        const existing = (await client.query('SELECT unit FROM erp_items WHERE id=$1',[id])).rows[0];
+        if(existing.unit!==value.unit && ((await client.query('SELECT 1 FROM erp_stock_entries WHERE item_id=$1 LIMIT 1',[id])).rowCount || (await client.query('SELECT 1 FROM erp_order_lines WHERE item_id=$1 LIMIT 1',[id])).rowCount)) throw new ConflictException('The unit cannot change after stock movements exist. Create a new item for another unit.');
+        if(!value.active && (await client.query('SELECT 1 FROM erp_stock_balances WHERE item_id=$1 AND quantity>0 LIMIT 1',[id])).rowCount) throw new ConflictException('Consume or transfer out stock before deactivating this item.');
         await client.query('UPDATE erp_items SET name=$2,description=$3,unit=$4,active=$5,version=version+1,updated_at=now(),updated_by=$6 WHERE id=$1',[id,value.name,value.description,value.unit,value.active,user.id]);
       }
       const record = (await client.query<Supplier | Item>(`SELECT ${this.columns(kind)} FROM ${this.table(kind)} WHERE id=$1`,[id])).rows[0];

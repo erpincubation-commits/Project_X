@@ -35,9 +35,10 @@ export class AccessController {
     if (id === request.user.id) throw new ForbiddenException('Ask another administrator to change your access.');
     return this.database.transaction(async client => {
       await client.query('SELECT pg_advisory_xact_lock(83478622)');
-      const before = (await client.query<ManagedUser>('SELECT id,email,role,active FROM erp_users WHERE id=$1 FOR UPDATE', [id])).rows[0];
+      const before = (await client.query<ManagedUser & {privacy_restricted:boolean}>('SELECT id,email,role,active,privacy_restricted FROM erp_users WHERE id=$1 FOR UPDATE', [id])).rows[0];
       if (!before) throw new ConflictException('Account no longer exists. Refresh the list.');
       if (request.user.role !== 'admin' && (before.role !== 'reader' || input.role !== 'reader')) throw new ForbiddenException('Only an administrator may change privileged accounts.');
+      if (input.active && before.privacy_restricted) throw new ConflictException('Release the privacy restriction through a reviewed privacy case first.');
       if (before.role === 'admin' && before.active && (input.role !== 'admin' || !input.active)) {
         if (!(await client.query("SELECT 1 FROM erp_users WHERE role='admin' AND active AND id<>$1 LIMIT 1", [id])).rowCount) throw new ConflictException('Keep at least one active administrator.');
       }

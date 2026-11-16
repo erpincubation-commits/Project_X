@@ -12,9 +12,9 @@
 
 This runbook describes how to validate the existing Electron/NestJS/PostgreSQL application, build and test its Windows installer, stage an on-premises deployment and decide whether a release can proceed. It also records the additional testing and operations required for the planned ERP. The product documents are planning inputs; the commands and current capabilities below come from the repository.
 
-**Current application:** Connect, sign in, create a customer as `admin`, view the register as `admin` or `reader`, and refresh from another client. Customer creation includes server validation, audit and retry protection. The full procure-to-pay, accounting, inventory, granular roles and MFA are not implemented.
+**Current application:** Mandatory MFA, nine-role server permissions, customers, supplier/item masters, request approval/rejection, INR accounting/periods/journals, warehouses, weighted stock and bank/stock/ledger reconciliation are implemented. Follow [accounting/inventory setup](ACCOUNTING_INVENTORY.md) and [the posting contract](ACCOUNTING_POSTINGS.md) for the accounting foundation and test coverage. Orders, partial/damaged receiving, invoice matching, dual payment approvals, confirmed transfers, AP/AR, configured tax and statements are implemented under schema 6; see [trade workflows](TRADE_WORKFLOWS.md). Statutory tax filing, credit notes/refunds and bank connectivity remain future work.
 
-**Production gate:** The current repository is not a production-ready ERP. MFA, detailed permissions, automated and tested backup/recovery, production monitoring, privacy workflows, complete business modules and financial/security acceptance remain outstanding. The default installer is unsigned. Treat the multi-machine procedure in section 6 as a staging/pilot procedure until all applicable gates are met. No tests or deployment are claimed to have run merely because this runbook exists.
+**Production gate:** The current repository is not a production-ready ERP. Configurable approval policies, automated and tested backup/recovery, production monitoring, privacy workflows, complete business modules and financial/security acceptance remain outstanding. The default installer is unsigned. Treat the multi-machine procedure in section 6 as a staging/pilot procedure until all applicable gates are met. No tests or deployment are claimed to have run merely because this runbook exists.
 
 ## 2. Roles and environment record
 
@@ -38,7 +38,7 @@ Never put passwords, connection strings containing credentials, tokens, `.env`, 
 1. Use Windows with a supported Node.js installation; the repository requires Node.js **22.12 or later**. Install project dependencies using `npm ci` from the repository root. Confirm the supported version matrix before production.
 2. Select **one** PostgreSQL target: the native project development cluster, a dedicated existing PostgreSQL server/database, or the Docker development alternative. The local default port is 5432; only one service can bind the same address and port. The API defaults to `127.0.0.1:3001`.
 3. Confirm the target database and account in protected configuration without printing or sharing credentials. Set `DATABASE_URL` and any other configuration in the root `.env` or protected environment. Changing an `.env` password does not change PostgreSQL's stored password.
-4. The integration and desktop tests create and drop a randomly named `erp_test_...` schema in the database specified by `DATABASE_URL`, so they require schema-creation permission. **Point them at a dedicated disposable test database**, not a production database; they are not read-only. Interrupted runs can leave a test schema for an administrator to inspect.
+4. Integration and desktop runners create a randomly named disposable `erp_test_...` database using the development DATABASE_URL account, then temporary schemas inside it. They require CREATE DATABASE and drop that disposable database on completion. Use a development account; never run tests using a production database owner. Interrupted runs may leave a disposable database for inspection.
 5. `npm run setup` and `scripts/Setup.cmd` initialise the native development setup. Do not use them against an existing or remote deployment. `npm run db:migrate` changes its configured target and may bootstrap an administrator if configured; check the target and take an appropriate backup before running it.
 6. Never delete `.local/postgres`, a PostgreSQL data directory or Docker volumes to fix a connection problem. Do not use `docker compose down -v` against data that must be retained.
 
@@ -219,3 +219,7 @@ Security, privacy, finance and customer IT approvals:
 Deployment decision / time / rollback authority:
 Post-deployment observations / handover:
 ```
+
+## Executable operations supplement
+
+The implemented schema 7 commands, release gates, maintenance and failure protocols are documented in [Operations runbook](OPERATIONS_RUNBOOK.md), [Backup/restore](BACKUP_RESTORE.md) and [Verification](VERIFICATION.md). Use these executable procedures for the current release; broader scenarios below remain planning requirements unless explicitly verified.

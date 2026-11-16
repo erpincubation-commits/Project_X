@@ -41,13 +41,31 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - run: npm run auth:configure
       - run: npm run build
+      - run: npm run check
       - run: npm test
       - run: npm run test:integration
+      - run: npm run security:check
+      - run: npm run security:dependencies
+      - name: Rehearse encrypted database recovery
+        run: npm run test:recovery
+        env:
+          PG_CONTAINER: ${{ job.services.postgres.id }}
+      - run: npm run test:load
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: server-verification-reports
+          path: .local/load-report.json
+          if-no-files-found: warn
+          retention-days: 14
   windows-installer:
     needs: validate
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://erp_ci:ephemeral-ci-only@127.0.0.1:5432/erp_ci
     steps:
       - uses: actions/checkout@v6
         with:
@@ -57,6 +75,10 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - name: Prepare isolated Windows development cluster
+        run: npm run setup
+      - name: Verify desktop workflows and accessibility
+        run: npm run test:desktop
       - name: Build NSIS installer
         run: npm run package:windows
         env:
@@ -65,6 +87,13 @@ jobs:
           WIN_CSC_KEY_PASSWORD: ${{ github.event_name == 'workflow_dispatch' && inputs.sign_release && secrets.WIN_CSC_KEY_PASSWORD || '' }}
       - name: Launch the packaged application
         run: npm run test:packaged
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-accessibility-reports
+          path: .local/accessibility/*.json
+          if-no-files-found: warn
+          retention-days: 14
       - uses: actions/upload-artifact@v7
         with:
           name: smb-erp-windows-installer

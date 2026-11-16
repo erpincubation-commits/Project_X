@@ -9,7 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 require('../apps/server/dist/config.js');
 const { Pool } = require('pg');
 const mode = process.argv[2];
-if (!['api', 'desktop'].includes(mode)) throw new Error('Choose api or desktop tests.');
+if (!['api', 'desktop', 'accessibility'].includes(mode)) throw new Error('Choose api, desktop or accessibility tests.');
 const configured = process.env.DATABASE_URL;
 if (!configured) throw new Error('Configure a development PostgreSQL connection first.');
 const name = `erp_test_${randomUUID().replaceAll('-', '')}`;
@@ -22,7 +22,7 @@ try {
   const args = mode === 'api'
     ? ['--test', ...(await readdir(new URL('../apps/server/test/', import.meta.url))).filter(file => file.endsWith('.integration.cjs')).map(file => `apps/server/test/${file}`)]
     : ['tools/desktop-smoke.mjs'];
-  const child = spawn(process.execPath, args, { cwd: root, env: { ...process.env, DATABASE_URL: url.toString() }, stdio: 'inherit', windowsHide: true });
+  const child = spawn(process.execPath, args, { cwd: root, env: { ...process.env, DATABASE_URL: url.toString(), ERP_ACCESSIBILITY_ONLY: mode==='accessibility'?'1':'0' }, stdio: 'inherit', windowsHide: true });
   const code = await new Promise((resolve, reject) => { child.once('error', reject); child.once('exit', value => resolve(value ?? 1)); });
   process.exitCode = code;
 } catch (error) {
