@@ -36,6 +36,10 @@ A challenge permits five attempts. Account-level MFA throttling persists across 
 
 TOTP uses [RFC 6238](https://www.rfc-editor.org/rfc/rfc6238) with SHA-1, six digits and a 30-second step. Seeds are encrypted with AES-256-GCM and bound to the account ID. Passwords use bcrypt with cost 12 and an explicit 72-byte limit; existing valid hashes remain usable. Recovery codes contain 128 random bits and are hashed and consumed atomically. TOTP is not phishing-resistant; see the [OWASP MFA guidance](https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html).
 
+## Changing a password
+
+An MFA-authenticated session and current password are required; there is no separate step-up prompt. The new password follows the existing 12-character minimum and 72 UTF-8-byte maximum. Ten change attempts are allowed per account per 15-minute window. A successful transaction changes the hash, increments the authentication version, revokes all sessions including the current session and deletes pending challenges, and records a secret-free audit event. Sign in again with the new password and MFA. If the response is lost, try signing in with the new password, then the previous one if needed; no automatic retry is made. Concurrent changes serialize and the losing session is rejected. MFA recovery material remains unchanged.
+
 ## Sessions and implemented permissions
 
 The server stores session-token hashes and enforces 30-minute idle and eight-hour absolute expiry. It loads the current account/role on each authenticated request. Disabled accounts, changed access or explicit revocation invalidate existing sessions and pending challenges. Desktop tokens and challenge tokens stay in main-process memory; only the temporary enrolment key and recovery codes are shown. The desktop checks sessions during activity/focus and signs out locally after 30 minutes without interaction. Offline sign-out cannot immediately contact the server.
@@ -61,6 +65,7 @@ Use **Account security and access** for provisioning, role changes, enable/disab
 | `POST /api/v1/auth/mfa/verify` | Challenge + authenticator/recovery code; returns session after successful verification. |
 | `GET /api/v1/auth/me` | Authenticated; current user and permissions. |
 | `POST /api/v1/auth/logout` | Authenticated; revokes current session. |
+| `POST /api/v1/auth/change-password` | Authenticated; current and new password; revokes all own sessions/challenges and returns 204. |
 | `POST /api/v1/auth/revoke-sessions` | Authenticated; revokes all own sessions/challenges. |
 | `GET/POST /api/v1/access/users` | `users.manage`; list/provision accounts. |
 | `PATCH /api/v1/access/users/:id` | `users.manage`; authorised role/active change and session revocation. |

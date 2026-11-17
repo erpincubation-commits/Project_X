@@ -77,7 +77,7 @@ Use synthetic fixtures and independent expected results; record revision, enviro
 3. Name decision/review owners, pilot findings, environment and unresolved dependencies; create independent synthetic expected-result fixtures for partial settlement, correction and opening cases.
 4. Record selected/deferred CF stories and release gates. A policy or this story does not enable postings or certify legal compliance.
 
-**Evidence:** Approved scope/decision record and accountant-reviewed posting/fixture references. **Dependencies:** Pilot findings and Finance/privacy/IT input. **Trace:** FUP-07, MOD-FIN-01/02, FR-FIN-01–09.
+**Evidence:** Approved scope/decision record and accountant-reviewed posting/fixture references. The [draft decision record and synthetic examples](CF01_FINANCE_DECISION_RECORD.md) are pending decisions and review; they do not satisfy approval. **Dependencies:** Pilot findings and Finance/privacy/IT input. **Trace:** FUP-07, MOD-FIN-01/02, FR-FIN-01–09.
 
 ## CF-02 — Let users change their password
 

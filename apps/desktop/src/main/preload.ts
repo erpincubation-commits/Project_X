@@ -12,6 +12,7 @@ const api: DesktopAPI = {
   setup: input => ipcRenderer.invoke('auth:setup', input),
   verifyMfa: input => ipcRenderer.invoke('auth:verify-mfa', input),
   me: () => ipcRenderer.invoke('auth:me'),
+  changePassword: input => ipcRenderer.invoke('auth:change-password', input),
   revokeSessions: () => ipcRenderer.invoke('auth:revoke-sessions'),
   listUsers: () => ipcRenderer.invoke('access:users'),
   createUser: input => ipcRenderer.invoke('access:create-user', input),

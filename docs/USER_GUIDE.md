@@ -66,6 +66,12 @@ If a code fails, check the correct account and latest setup key, enable automati
 
 If you lose both the authenticator and recovery codes, contact your administrator. A complete operator-assisted MFA/password recovery workflow is still a product gap; there is no self-service reset screen. Do not create a replacement user or rerun initial setup to bypass a lockout.
 
+### Change your password
+
+While signed in, open **Account security and access**, enter your **Current password**, **New password** and **Confirm new password**, then select **Change password**. Use at least 12 characters and at most 72 UTF-8 bytes. All sessions, including this one, and pending sign-in challenges end on success. Sign in again with the new password and your authenticator or unused recovery code. Save other unsaved work first.
+
+If the response is lost, the change may have succeeded. Sign in with the new password; if it does not work, try the previous password. Do not repeatedly retry: password-change attempts are limited to ten in 15 minutes. If neither works, contact an administrator; self-service password reset is not available. MFA is required at sign-in; there is no additional password-change MFA prompt.
+
 ### Sign out and session expiry
 
 Select **Sign out** when finished. **Account security and access → Sign out all my sessions** ends all your sessions and pending sign-in challenges. The server enforces 30-minute idle and eight-hour absolute expiry; the desktop also signs out after 30 minutes without interaction. Sign in again when asked. Unsaved forms may need re-entry.
@@ -403,7 +409,7 @@ Current boundaries include fixed roles/policies, one company per deployment, INR
 
 ## Planned modules and availability
 
-The [ERP module roadmap](ERP_MODULE_ROADMAP.md) proposes Finance completion, CRM/Sales, broader Supply Chain, HR and Marketing using [ERPNext/Frappe workflow references](ERPNEXT_MODULE_CROSSWALK.md). The proposed [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) provide more detail for the first expansion phase. These are development plans, not additional installed workspaces. Current source remains version 0.2.0 / schema 7; the operator must confirm your deployed versions separately.
+The [ERP module roadmap](ERP_MODULE_ROADMAP.md) proposes Finance completion, CRM/Sales, broader Supply Chain, HR and Marketing using [ERPNext/Frappe workflow references](ERPNEXT_MODULE_CROSSWALK.md). The proposed [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) provide more detail for the first expansion phase. The [draft Finance decision record](CF01_FINANCE_DECISION_RECORD.md) collects unresolved scope and policy decisions and synthetic examples for review; it is not approved or authority to post. These are development plans, not additional installed workspaces. Current source remains version 0.2.0 / schema 7; the operator must confirm your deployed versions separately.
 
 | Area | What you can use now | Planned addition |
 | --- | --- | --- |
@@ -423,6 +429,8 @@ The root [contributor instructions](../AGENTS.md) and [documentation maintenance
 
 | Date | Baseline / change | Guide update |
 | --- | --- | --- |
+| 2026-11-17 | 0.2.0 / schema 7; FUP-01 password change | Reviewed sign-in, session revocation, password limits and uncertain responses against the new desktop and API flow. Upgrade client and server together; no schema migration or deployment acceptance is implied. |
+| 2026-11-17 | 0.2.0 / schema 7; CF-01 draft decision record | Reviewed current Finance posting, opening, report and privacy limits against the draft scope and synthetic examples. No user workflow, role, configuration, version or schema changed; operators should continue current procedures and obtain Finance review before any release decision. |
 | 2026-11-17 | 0.2.0 / schema 7; Core and Finance story refinement | Reviewed sign-in/access, purchasing and Finance corrections, openings, reports, privacy and recovery limits against the proposed CF-01–21 backlog. Added a planning reference; no current task, role, operator procedure, application version or schema changed. No operator action or deployment acceptance is implied. |
 | 2026-11-17 | 0.2.0 / schema 7; module expansion plan | Reviewed current navigation, roles, service AR, stock/purchasing, imports/privacy and deployment limits against the proposed six-module scope. Added an availability table and roadmap/reference links; current task instructions and application/schema baseline remain unchanged. Operator implication: no module enablement, migration or installation required by this documentation change. No new UI/test/deployment acceptance is established. |
 | 2026-11-16 | 0.2.0 / schema 7 | Initial consolidated guide: connection, MFA/access, masters, procure to pay, books/stock, AP/AR, tax/reconciliation, imports/privacy, history, recovery boundaries and support. Added same-change maintenance instructions and documentation check. Reconciled current-schema and implemented-scope statements in the linked workflow documents and README. Reviewed against source; hosted CI and deployed environment acceptance are not established by this documentation change. |

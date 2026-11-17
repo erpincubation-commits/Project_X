@@ -80,6 +80,7 @@ test('setup, mandatory MFA, recovery, expiry, permissions, account changes and a
     const disabled = await request('/access/users/'+created.data.id,'PATCH',{role:'reader',active:false},admin);
     assert.equal(disabled.status,200);
     assert.equal((await request('/auth/me','GET',undefined,reader)).status,401);
+    assert.equal((await request('/auth/change-password','POST',{currentPassword:password,newPassword:'another-password'},reader)).status,401);
     assert.equal((await request('/auth/login','POST',{email:'reader@test.example',password})).status,401);
     assert.equal((await request('/access/users/'+account.id,'PATCH',{role:'reader',active:false},admin)).status,403);
     for (const role of ['identity_admin','auditor']) {
@@ -98,6 +99,7 @@ test('setup, mandatory MFA, recovery, expiry, permissions, account changes and a
     await pool.query("UPDATE erp_sessions SET expires_at=now()-interval '1 second' WHERE token_hash=$1",[digest(recovered.data.token)]);
     assert.equal((await request('/auth/me','GET',undefined,recovered.data.token)).status,401);
     await pool.query("UPDATE erp_sessions SET last_seen_at=now()-interval '31 minutes' WHERE token_hash=$1",[digest(admin)]);
+    assert.equal((await request('/auth/change-password','POST',{currentPassword:password,newPassword:'another-password'},admin)).status,401);
     assert.equal((await request('/auth/me','GET',undefined,admin)).status,401);
     // A fresh recovery login remains possible; revoke invalidates all sessions and challenges.
     const fresh = await login(account.email);
@@ -111,8 +113,31 @@ test('setup, mandatory MFA, recovery, expiry, permissions, account changes and a
     const serial = JSON.stringify((await pool.query('SELECT * FROM erp_audit_events')).rows);
     for(const secret of [password, initial.enrollment.secret, finalToken, ...enabled.data.recoveryCodes]) assert.ok(!serial.includes(secret));
     for(const action of ['setup.denied','setup.completed','mfa.enabled','mfa.verification_failed','mfa.recovery_used','access.denied','user.created','user.access_changed']) assert.ok(serial.includes(action),action);
+    const pendingChange = await login(account.email);
+    const newPassword = 'different-secure-password';
+    assert.equal((await request('/auth/change-password','POST',{currentPassword:password,newPassword},undefined)).status,401);
+    assert.equal((await request('/auth/change-password','POST',{currentPassword:password,newPassword:'short'},finalToken)).status,400);
+    assert.equal((await request('/auth/change-password','POST',{currentPassword:password,newPassword:'\u00e9'.repeat(40)},finalToken)).status,400);
+    assert.equal((await request('/auth/change-password','POST',{currentPassword:'wrong-password',newPassword},finalToken)).status,403);
+    const otherToken = recoveryRace.find(result=>result.status===201).data.token;
+    const changes = await Promise.all([finalToken,otherToken].map(token=>request('/auth/change-password','POST',{currentPassword:password,newPassword},token)));
+    assert.deepEqual(changes.map(x=>x.status).sort(),[204,401]);
+    assert.equal((await request('/auth/me','GET',undefined,finalToken)).status,401);
+    assert.equal((await request('/auth/me','GET',undefined,otherToken)).status,401);
+    assert.equal((await request('/auth/mfa/verify','POST',{challenge:pendingChange.challenge,code:enabled.data.recoveryCodes[3]})).status,401);
+    assert.equal((await request('/auth/login','POST',{email:account.email,password})).status,401);
+    const changedLogin = await request('/auth/login','POST',{email:account.email,password:newPassword});
+    assert.equal(changedLogin.status,201);
+    const changedSession = await request('/auth/mfa/verify','POST',{challenge:changedLogin.data.challenge,code:enabled.data.recoveryCodes[3]});
+    assert.equal(changedSession.status,201);
+    await pool.query('DELETE FROM erp_login_attempts WHERE email=$1',['password-change:' + account.id]);
+    for(let i=0;i<10;i++) assert.equal((await request('/auth/change-password','POST',{currentPassword:'wrong-password',newPassword},changedSession.data.token)).status,403);
+    assert.equal((await request('/auth/change-password','POST',{currentPassword:newPassword,newPassword},changedSession.data.token)).status,429);
+    const securityRecords = JSON.stringify((await pool.query('SELECT * FROM erp_audit_events')).rows);
+    for(const secret of [password,newPassword,'wrong-password',finalToken,otherToken,pendingChange.challenge]) assert.ok(!securityRecords.includes(secret));
+    assert.match(securityRecords,/auth.password_changed/);
     await assert.rejects(()=>pool.query("DELETE FROM erp_audit_events"));
-    assert.equal((await request('/auth/revoke-sessions','POST',undefined,finalToken)).status,204);
+    assert.equal((await request('/auth/revoke-sessions','POST',undefined,changedSession.data.token)).status,204);
     assert.equal((await request('/auth/me','GET',undefined,finalToken)).status,401);
     assert.equal((await request('/auth/me','GET',undefined,recoveryRace.find(result=>result.status===201).data.token)).status,401);
   } finally {

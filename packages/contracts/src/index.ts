@@ -18,6 +18,7 @@ export const loginInput = z.object({
 }).strict();
 export const passwordInput = z.string().min(12, 'Use at least 12 characters.').max(128)
   .refine(value => new TextEncoder().encode(value).length <= 72, 'Use at most 72 UTF-8 bytes.');
+export const changePasswordInput = z.object({ currentPassword: loginInput.shape.password, newPassword: passwordInput }).strict();
 export const setupInput = z.object({ email: loginInput.shape.email, password: passwordInput, setupToken: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 export const mfaInput = z.object({ challenge: z.string().regex(/^[a-f0-9]{64}$/), code: z.string().trim().min(6).max(40) }).strict();
 export const roleInput = z.enum(['admin', 'reader', 'identity_admin', 'auditor', 'requester', 'business_approver', 'purchasing', 'accountant', 'inventory_manager']);
@@ -58,6 +59,7 @@ export interface DesktopAPI extends BooksAPI, TradeAPI, OperationsAPI {
   verifyMfa(input: { code: string }): Promise<Result<SignedIn>>;
   me(): Promise<Result<User>>;
   revokeSessions(): Promise<Result<null>>;
+  changePassword(input: z.infer<typeof changePasswordInput>): Promise<Result<null>>;
   listUsers(): Promise<Result<ManagedUser[]>>;
   createUser(input: z.infer<typeof createUserInput>): Promise<Result<ManagedUser>>;
   updateUser(id: string, input: z.infer<typeof updateUserInput>): Promise<Result<ManagedUser>>;
