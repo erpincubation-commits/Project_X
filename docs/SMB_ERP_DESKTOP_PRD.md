@@ -1,8 +1,8 @@
 # SMB ERP Desktop — Product Requirements Document
 
 **Status:** Draft for product, engineering, accounting and privacy review  
-**Version:** 0.1  
-**Date:** 15 November 2026  
+**Version:** 0.2\
+**Date:** 17 November 2026\
 **Sources:** `SMB_ERP_PRD.md` and `ERP_Architecture.md`; adapted to the agreed desktop direction.
 
 This document describes the intended product and release requirements. Requirements and targets are proposals until approved; they are not a claim that the existing application already implements them. The original documents are product inputs, not implementation instructions. Where their web-specific assumptions differ from the decisions below, this document records the desktop adaptation.
@@ -11,7 +11,7 @@ This document describes the intended product and release requirements. Requireme
 
 Build an ERP for small and medium-sized businesses, initially targeting organisations with approximately 20–150 employees. Staff use a Windows desktop application to work with shared company data on a customer-controlled, on-premises server. The first complete release centres on procure-to-pay, supported by finance, inventory, administration and reporting.
 
-The product should replace disconnected spreadsheets and manual handoffs with traceable transactions, role-based approvals and consistent accounting records. Later releases extend the same shared data and controls to sales, manufacturing, HR and other operations.
+The product should replace disconnected spreadsheets and manual handoffs with traceable transactions, role-based approvals and consistent accounting records. The [module expansion roadmap](ERP_MODULE_ROADMAP.md) proposes six connected areas: Finance, Sales, CRM, Supply Chain, HR and Marketing. Manufacturing, projects and other extensions remain separately scoped later work. ERPNext supplies workflow inspiration through the [reference crosswalk](ERPNEXT_MODULE_CROSSWALK.md); the agreed desktop stack remains unchanged.
 
 ### Agreed product and technology decisions
 
@@ -23,7 +23,7 @@ The product should replace disconnected spreadsheets and manual handoffs with tr
 
 ### Current baseline
 
-The repository currently contains an Electron desktop client, a NestJS API and PostgreSQL integration, including login and a limited customer-management workflow. It also contains initial error handling, logging, development commands and Windows packaging work. This is an initial client-to-server slice, not a complete ERP. The features and release controls below require implementation and verification; an installer build alone does not establish production readiness.
+Source baseline 0.2.0 / schema 7 includes mandatory MFA, nine fixed roles, customer/supplier/item masters, request approval, orders/receipts, INR books and weighted stock, AP/AR, payment approvals/recording, collections, reconciliation/statements, master imports and limited privacy operations. See the [user guide](USER_GUIDE.md) for implemented tasks and limits. Full stocked Sales, CRM, HR and Marketing are not implemented. Finance and Supply Chain are partial foundations. Requirements below include both implemented slices and remaining target behaviour; source availability and an installer do not establish deployment or production acceptance.
 
 ## 2. Users and needs
 
@@ -34,6 +34,8 @@ The repository currently contains an Electron desktop client, a NestJS API and P
 | Purchasing | Request, approve and order goods; track supplier commitments and exceptions. |
 | Warehouse | Receive goods, record shortages or damage and view stock by location. |
 | Sales and accounts receivable | Manage customers, orders, invoices, collections and returns in later phases. |
+| CRM and sales operations | Qualify leads, manage contacts/opportunities and hand accepted business to Sales without duplicate customers. |
+| Marketing | Plan campaigns, maintain eligible audiences and measure source-to-revenue results within permitted data scope. |
 | HR and operations | Manage permitted workforce, manufacturing and project information in later phases. |
 | IT administrator | Install and maintain the client and server, control access, recover data and diagnose failures. |
 | Auditor or privacy administrator | Review authorised records and decisions, and support relevant data requests. |
@@ -67,7 +69,7 @@ These are validation targets, not measured results. Network, hardware, data volu
 
 ### Scope and constraints
 
-Phase 1 includes the core platform, finance, procurement, inventory, essential reporting, migration and operational recovery. Later phases are described in section 10. Payroll compliance, jurisdiction-specific filings, mobile applications and enterprise extensions are not implied by the initial desktop release.
+Phase 1 includes the core platform, Finance, procurement/inventory foundations of Supply Chain, essential reporting, migration and operational recovery. Section 10 refines later delivery into CRM/Sales, Supply Chain expansion, HR and Marketing. The existing controlled pilot is phase 0 and retains its own capacity. Payroll compliance, jurisdiction-specific filings, mobile applications and enterprise extensions are not implied by the initial desktop release.
 
 The source PRD describes smartphone approvals and responsive warehouse access. Their business need remains open: Windows-only desktop does not satisfy mobile use. Product owners must decide whether and when to add a mobile or browser experience and how it will be secured. No offline multi-user writes or synchronisation are assumed; the client requires connectivity to the shared server for transactions.
 
@@ -140,7 +142,7 @@ Where foreign-currency transactions are in scope, record currencies, rates, roun
 | FR-P2P-05 | P0 | Create payable items and payment batches, apply appropriate dual approval, record payment and allocation, and post accounting entries. An external bank transfer or banking integration is not assumed. |
 | FR-P2P-06 | P0 | Maintain supplier identity, payment and tax details, status and history. Restrict and audit sensitive changes, including approval of supplier bank-detail changes. |
 
-An RFQ/supplier quotation step appears in the architecture. Its exact first-release scope and approval rules need product confirmation; purchase orders must not depend on an unapproved RFQ implementation.
+RFQ/supplier quotations are proposed in Supply Chain phase 3 with reviewed sourcing/approval rules. The current purchase-to-payment path and core release do not depend on that future increment.
 
 ### 5.5 Inventory and warehouse
 
@@ -153,6 +155,8 @@ An RFQ/supplier quotation step appears in the architecture. Its exact first-rele
 
 ### 5.6 Sales and CRM
 
+Sales owns commercial commitments; CRM owns prospect qualification and customer handoff. Current customer invoicing/collections remain the service/non-stock path and do not imply sales orders, dispatch or COGS. The planned Sales increment includes a Supply Chain reservation/dispatch slice before broader replenishment and sourcing work.
+
 | ID | Priority | Requirement |
 | --- | --- | --- |
 | FR-SLS-01 | P1 | Maintain customers, quotations and sales orders with status, pricing, tax and approval rules. |
@@ -160,6 +164,9 @@ An RFQ/supplier quotation step appears in the architecture. Its exact first-rele
 | FR-SLS-03 | P1 | Create sales invoices from approved source transactions and post receivables and ledger entries. |
 | FR-SLS-04 | P1 | Record and allocate customer payments and receipts, reconciling to bank and receivables. |
 | FR-SLS-05 | P1 | Process returns and credit notes with stock, receivable and accounting effects. |
+| FR-CRM-01 | P1 | Maintain scoped contacts/addresses, leads, qualification and opportunities with ownership, stage history, follow-up activities and won/lost reasons. |
+| FR-CRM-02 | P1 | Convert/link a qualified prospect to a customer exactly once with reviewed deduplication, preserved source references and no automatic ledger posting. Protect contact imports, discovery and exports. |
+| FR-SLS-06 | P1 | Apply reviewed price/discount authority, customer credit holds and partial reservation/dispatch/cancellation rules without overselling; preserve accepted price/tax snapshots and invoice/source allocation. |
 
 ### 5.7 HR, manufacturing and additional operations
 
@@ -169,6 +176,7 @@ An RFQ/supplier quotation step appears in the architecture. Its exact first-rele
 | FR-HR-02 | P2 | Record leave requests, balances and approvals. |
 | FR-HR-03 | P2 | Support payroll only for a specifically selected and legally reviewed jurisdiction; define calculations, reporting, integrations and retention before commitment. |
 | FR-HR-04 | P2 | Record expense claims, approvals and accounting/payment integration. |
+| FR-HR-05 | P2 | Maintain departments/designations, employee/manager relationships and lifecycle separately from login accounts; support reviewed attendance and leave allocation/cancellation with own/manager/HR data scopes. |
 | FR-MFG-01 | P2 | Maintain versioned bills of materials and component quantities. |
 | FR-MFG-02 | P2 | Create and track work orders, material consumption, output and inventory/accounting effects. |
 
@@ -184,6 +192,23 @@ Projects and fixed assets are future capabilities requiring separate requirement
 | FR-INT-01 | P1 | Offer a documented, versioned API for approved integrations with authentication, authorisation, rate controls and compatibility policy. The internal desktop API is required in P0. |
 | FR-INT-02 | P0 | Import and export agreed master data, opening balances and operational records using documented templates, validation, error reports and reconciliation. |
 | FR-INT-03 | P2 | Provide authenticated, retryable webhooks for approved business events with a documented delivery and deduplication contract. |
+
+### 5.9 Finance, Supply Chain and Marketing expansion
+
+These extend the retained requirement IDs above. Priorities describe release importance, not roadmap phase numbers; all additions remain proposed. Candidate epics and acceptance are in roadmap section 5.
+
+| ID | Priority | Requirement |
+| --- | --- | --- |
+| FR-FIN-09 | P0 | Complete linked credits/returns/refunds and controlled opening migration, with original-source/allocation limits, tax/rounding/period rules and AP/AR/GRNI/stock/GL reconciliation. Refines FR-FIN-01/04 and existing FUP-03/04. |
+| FR-FIN-10 | P1 | Extend reviewed cost centres, budgets, bank-file matching and controlled reports/exports; define duplicate handling and reproducible report calculations. |
+| FR-SCM-01 | P1 | Calculate explainable replenishment suggestions from on-hand, reserved, inbound and demand quantities; require review before creating procurement commitments. |
+| FR-SCM-02 | P1 | Capture RFQs/supplier quotes, compare terms and select sourcing under approval controls. Split/consolidated orders require a reviewed replacement for the current one-request/one-order constraint. |
+| FR-SCM-03 | P1 | Control supplier returns, quarantine/release/disposal and count adjustment approval with source-linked stock/valuation/GRNI/AP effects; extend basic picking/dispatch without a second stock ledger. |
+| FR-MKT-01 | P2 | Plan campaigns with owner, dates, budget, eligible audience and source attribution through CRM/Sales; maintain purpose/channel preferences and suppressions. |
+| FR-MKT-02 | P2 | Report deduplicated lead, opportunity and realised-revenue attribution using a defined model/window, with actual costs linked to Finance and protected aggregate/detail access. |
+| FR-MKT-03 | P2 | Add outbound communications only after selecting providers and defining authorisation, eligibility recheck, unsubscribe, secure callbacks, bounded retries, delivery deduplication and restore behaviour. Initial Marketing scope is planning/manual results. |
+
+The employee claim workflow requires an independently reviewed employee-payable posting contract. Payroll is excluded from HR core acceptance. CRM stages and marketing funnel values never substitute for posted revenue.
 
 ## 6. Core workflows and acceptance criteria
 
@@ -239,7 +264,7 @@ Privacy by design requires technical and organisational safeguards from the star
 
 ## 8. Data, integrations and migration
 
-The shared data model must support users and roles; customers and suppliers; items, warehouses and stock movements; purchase requests, orders, receipts and invoices; payments and bank transactions; ledger accounts and journals; approvals and audit events. Add later-domain entities as their workflows are approved. Retain source relationships and immutable identifiers for reconciliation.
+The shared data model must support users and roles; customers and suppliers; items, warehouses and stock movements; purchase requests, orders, receipts and invoices; payments and bank transactions; ledger accounts and journals; approvals and audit events. Planned module entities include contacts/leads/opportunities, quotations/orders/dispatch, reservations/sourcing/quality, employees/leave/attendance/claims and campaigns/preferences/attribution. Add them through reviewed migrations as workflows are approved; retain current customer codes and source relationships rather than duplicating party, stock or financial identities. See the [proposed schema extensions](SMB_ERP_BACKEND_SCHEMA.md#15-proposed-module-extensions).
 
 Before customer go-live, agree ownership, templates, mapping, validation and a migration rehearsal for master records, stock and opening financial balances. Produce error reports, compare imported totals to the source and obtain customer sign-off. Protect exported files and staging environments using the same appropriate access and retention controls as production.
 
@@ -255,15 +280,18 @@ External integrations, object storage, background queues, third-party services a
 
 ## 10. Delivery phases
 
-The source PRD's month ranges are indicative aspirations, not an approved schedule. Each phase requires its own scope, estimate and acceptance review.
+The [module roadmap](ERP_MODULE_ROADMAP.md#4-delivery-sequence-and-gates) owns the refined delivery order below. It supersedes the earlier broad revenue/operations/growth grouping. Each phase needs estimates and named reviewers before scheduling; no dates or module delivery budget are committed. The one-developer/two-week capacity belongs only to the existing pilot.
 
 | Phase | Scope | Exit condition |
 | --- | --- | --- |
-| 1 — Foundation and procure-to-pay | Desktop/server deployment, security and administration, core accounting, procurement, inventory, essential reporting, migration and recovery. | End-to-end scenarios in section 6 pass; country/accounting configuration, security, privacy and operational release gates are approved. |
-| 2 — Revenue | Sales/CRM, quotations, order-to-cash, expanded reporting and fixed assets as separately specified. | Agreed sales-to-ledger scenarios and controls pass. |
-| 3 — Operations | Prioritised HR, expenses, manufacturing and projects; payroll only after a jurisdiction-specific review. | Each selected workflow has approved scope, integrations and acceptance evidence. |
-| 4 — Growth | Marketing, additional integrations, advanced analytics and approved country packs. | Each integration or country pack has an owner, support policy and validated controls. |
-| 5 — Enterprise extensions | Potential multi-company consolidation, portals and advanced manufacturing. | Separate business case, architecture and acceptance criteria approved. |
+| 0 — Controlled pilot | Existing PIL-01–08; synthetic staging and recovery of current workflows. | Recorded constrained-pilot acceptance; production remains separate. |
+| 1 — Core and Finance | Existing FUP-01–08, financial correction/opening, access/privacy/operational gaps and shared party design. | Section 6 scenarios and selected core-release gates accepted. |
+| 2A — CRM | Contacts, leads, opportunities, activities and customer conversion. | Scoped pipeline and duplicate-safe handoff, with no ledger effects. |
+| 2B — Sales | Quotation/order through partial stock fulfilment, invoicing, returns and collections; includes basic reservations/dispatch. | Reviewed stock/COGS/AR/tax/bank reconciliation and correction tests. |
+| 3 — Supply Chain | Replenishment, sourcing, quality/returns/count control and extended fulfilment. | Demand, stock, GRNI, AP and ledger reconcile under approvals. |
+| 4 — HR core | Employee lifecycle, leave/attendance and Finance-integrated expenses. | Scoped employee data, correct leave balances and independently approved reconciled claims. Payroll separately gated. |
+| 5 — Marketing | Campaign planning, eligibility, source attribution and results; optional delivery after provider gate. | Reviewed suppression, privacy and metrics; recoverable/deduplicated delivery if selected. |
+| Later — Extensions | Payroll, manufacturing, projects, assets, POS, portals, country packs and multi-company. | Separate scope, business case, architecture, staffing and acceptance. |
 
 ## 11. Release gates and risks
 
@@ -282,15 +310,17 @@ Principal risks are an undecided tax jurisdiction; incomplete accounting and wor
 
 | Decision | Why it matters | Owner to assign |
 | --- | --- | --- |
-| Initial country, currency and tax/accounting requirements | Determines localisation, tax reporting, posting and statutory retention. | Product and accounting |
+| Initial country and tax/accounting requirements; INR remains the current currency | Determines localisation, tax reporting, posting and statutory retention. | Product and accounting |
 | Pilot customer and deployment size | Determines realistic acceptance data, hardware, network and support targets. | Product and operations |
 | Supported Windows/server/PostgreSQL versions and distribution | Determines testing, installer and maintenance matrix. | Engineering and operations |
 | Mobile approvals and warehouse access | Original web PRD includes mobile workflows that the initial desktop application does not cover. | Product and operations |
 | MFA methods, identity integration and administrator recovery | Determines authentication design and operational dependencies. | Security and customer IT |
 | Backup frequency, recovery objectives, encryption and key custody | Determines actual data loss and recovery limits. | Customer IT and operations |
 | Update policy, signing identity and certificate provisioning | Determines trusted delivery and operation on disconnected networks. | Engineering and customer IT |
-| RFQ, foreign currency, bank integration and first-release report details | Determines final phase-1 implementation and accounting scope. | Product and accounting |
+| Core report/exports and jurisdictional scope; separately RFQ, foreign currency and bank integration | Core release scope first; RFQ is planned phase 3 and foreign currency/bank integration need separate selection. | Product and accounting |
 | Privacy responsibilities, retention and data request procedures | Determines customer configuration and any legal or organisational work. | Customer privacy lead and advisers |
+| Module priority/staffing, sales credit/pricing and party ownership | Determines estimates, CRM/Sales boundaries and permission scopes. | Product, Sales and Finance |
+| Replenishment/quality, employee policy and Marketing eligibility/providers | Determines module-specific data, approvals and operational dependencies. | Purchasing/warehouse, HR, Marketing, privacy and IT |
 
 ## 13. Traceability to the source PRD
 
@@ -305,5 +335,6 @@ Principal risks are an undecided tax jurisdiction; incomplete accounting and wor
 | Reporting `FR-RPT-01`–`03`, integrations `FR-INT-01`–`03` | Section 5.8 | Essential reports/imports remain in phase 1; external integration scope is phased. |
 | Web delivery, mobile responsiveness and original web stack | Sections 4, 5.1 and 12 | Replaced with the agreed Electron/React and NestJS/PostgreSQL model; mobile need stays open. |
 | Original non-functional and compliance goals | Sections 3, 7 and 11 | Retains targets as unverified goals and adds deployment, signing and shared operational responsibilities. |
+| Six-module expansion request, 17 November 2026 | Sections 1, 5.6–5.9, 8 and 10; module roadmap | Adds CRM/Marketing requirements, extends Finance/Supply Chain/HR and refines staged delivery without changing the current application baseline. |
 
 Related project documentation: [desktop migration](DESKTOP_MIGRATION.md), [deployment](DEPLOYMENT.md), and [PostgreSQL setup](POSTGRES_SETUP.md).

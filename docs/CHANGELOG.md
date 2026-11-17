@@ -1,5 +1,24 @@
 ﻿# Changelog
 
+## Unreleased - Core and Finance epic and stories (17 November 2026)
+
+- Added the proposed CORE-FIN epic and CF-01–21 stories with acceptance criteria, dependencies, evidence, scope decisions and traceability to existing FUP and MOD epics.
+- Linked the phase 1 backlog from the roadmap, pilot planning documents, documentation index and maintained user guide. The controlled pilot and its capacity remain unchanged; no application, schema, operational procedure or deployed state changed.
+
+## Unreleased - Six-module expansion plan (17 November 2026)
+
+- Added a proposed Finance, CRM/Sales, Supply Chain, HR and Marketing roadmap with module ownership, dependencies, candidate MOD-* epics, acceptance gates, deferred scope and sizing/decision requirements.
+- Added a current ERPNext/Frappe reference crosswalk and documentation index; retained the archived pilot crosswalk as historical.
+- Reconciled PRD, technical/schema/access, application flow/UI, specialist workflow/posting, pilot backlog and deployment/recovery/verification plans. Updated the user guide's review date, planned availability and maintenance coverage.
+- Documentation only: application 0.2.0 / schema 7 and immediate PIL-01–08 scope/capacity remain unchanged. No new module, dependency, migration, deployment, statutory support or acceptance result is delivered by this plan.
+
+
+## Unreleased - Maintained user guide
+
+- Added a desktop user guide covering connection/MFA, actual role permissions, masters, procure-to-pay, accounting/stock, AR, reporting, imports/privacy and support, with a synthetic INR example.
+- Added contributor instructions and a maintenance checklist requiring guide review with each application or operating-workflow change, including dated reviews for internal changes.
+- Added `npm run docs:check` and a CI gate for guide updates, local links and the package/schema baseline. Narrative accuracy remains a reviewer responsibility; protected merging requires the repository's validate job to be required.
+
 ## Unreleased - Operational readiness
 
 - Added create-only master import dry runs with normalized row validation, expiring actor-bound previews, atomic commits, history and retry protection.

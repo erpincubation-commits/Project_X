@@ -1,8 +1,8 @@
 # SMB ERP Desktop — Testing and Deployment Runbook
 
 **Status:** Draft; development and staging procedures with production release gates  
-**Version:** 0.1  
-**Date:** 15 November 2026  
+**Version:** 0.2\
+**Date:** 17 November 2026\
 **Audience:** Developers, QA, customer IT, release and incident owners  
 **Related:** [Development](DEVELOPMENT.md) · [PostgreSQL setup](POSTGRES_SETUP.md) · [Deployment](DEPLOYMENT.md) · [Windows installer](WINDOWS_INSTALLER.md) · [Security and access](SMB_ERP_SECURITY_AND_ACCESS.md)
 
@@ -14,7 +14,7 @@ This runbook describes how to validate the existing Electron/NestJS/PostgreSQL a
 
 **Current application:** Mandatory MFA, nine-role server permissions, customers, supplier/item masters, request approval/rejection, INR accounting/periods/journals, warehouses, weighted stock and bank/stock/ledger reconciliation are implemented. Follow [accounting/inventory setup](ACCOUNTING_INVENTORY.md) and [the posting contract](ACCOUNTING_POSTINGS.md) for the accounting foundation and test coverage. Orders, partial/damaged receiving, invoice matching, dual payment approvals, confirmed transfers, AP/AR, configured tax and statements are implemented under schema 6; see [trade workflows](TRADE_WORKFLOWS.md). Statutory tax filing, credit notes/refunds and bank connectivity remain future work.
 
-**Production gate:** The current repository is not a production-ready ERP. Configurable approval policies, automated and tested backup/recovery, production monitoring, privacy workflows, complete business modules and financial/security acceptance remain outstanding. The default installer is unsigned. Treat the multi-machine procedure in section 6 as a staging/pilot procedure until all applicable gates are met. No tests or deployment are claimed to have run merely because this runbook exists.
+**Production gate:** The current repository is not a production-ready ERP. Schema 7 includes encrypted backup/new-database restore and limited import/privacy tools; scheduling/off-host retention, full privacy coverage, configurable policies, recovery operations, production monitoring and financial/security/environment acceptance remain outstanding. The [module roadmap](ERP_MODULE_ROADMAP.md) stages future modules independently of selected core-release acceptance. The default installer is unsigned. Treat the multi-machine procedure in section 6 as a staging/pilot procedure until all applicable gates are met. No tests or deployment are claimed to have run merely because this runbook exists.
 
 ## 2. Roles and environment record
 
@@ -89,7 +89,7 @@ npm run test:desktop
 | `npm run test:integration` | Uses a temporary PostgreSQL schema to exercise authentication, permission denial, validation, retry, audit and transactional rollback; exits successfully and normally removes its schema. |
 | `npm run test:desktop` | Starts a test server and two Electron clients against a temporary schema; verifies the shared customer workflow; exits successfully. Requires a working Windows GUI/session. |
 
-These checks cover the present customer slice, not future procurement, accounting or privacy requirements. If a test is interrupted, an administrator may inspect leftover `erp_test_...` schemas and remove only a verified disposable test schema under the database's change procedure. Do not run broad schema cleanup commands.
+These suites now include implemented procurement, books, trade and operational cases; consult current workflow guides and test source for exact coverage. They do not verify proposed module requirements merely because the commands exist. If a test is interrupted, an administrator may inspect leftover `erp_test_...` schemas and remove only a verified disposable test schema under the database's change procedure. Do not run broad schema cleanup commands.
 
 ### 4.3 Manual smoke test — current functionality
 
@@ -190,7 +190,7 @@ The release owner coordinates rollback with the database and business owners. St
 
 ## 10. Future ERP test plan
 
-These are required tests for functionality that is **not yet implemented**. Add executable tests and fixtures as each module is built; do not treat this list as passed.
+This matrix mixes regression obligations for implemented foundations with remaining target tests. Extend executable tests/fixtures for each selected module; neither a scenario listed here nor a previous baseline pass establishes acceptance for a new release. Section 12 identifies proposed module scenarios.
 
 | Test level | Planned acceptance |
 | --- | --- |
@@ -222,4 +222,23 @@ Post-deployment observations / handover:
 
 ## Executable operations supplement
 
-The implemented schema 7 commands, release gates, maintenance and failure protocols are documented in [Operations runbook](OPERATIONS_RUNBOOK.md), [Backup/restore](BACKUP_RESTORE.md) and [Verification](VERIFICATION.md). Use these executable procedures for the current release; broader scenarios below remain planning requirements unless explicitly verified.
+The implemented schema 7 commands, release gates, maintenance and failure protocols are documented in [Operations runbook](OPERATIONS_RUNBOOK.md), [Backup/restore](BACKUP_RESTORE.md) and [Verification](VERIFICATION.md). Use these executable procedures for the current release; broader scenarios remain planning requirements unless explicitly verified.
+
+## 12. Module expansion acceptance
+
+Reviewed 17 November 2026. These are proposed acceptance scenarios for the [module roadmap](ERP_MODULE_ROADMAP.md), not executed tests or changes to PIL-01–08. Each needs synthetic fixtures, independent expected results, allowed/denied actors and source/client/server/contracts/schema/module versions in its evidence record.
+
+| Module / epic | Business and integrity scenarios | Failure, scope and release scenarios |
+| --- | --- | --- |
+| Shared platform / MOD-PLT-01 | Preserve customer codes and financial/master links on populated-schema upgrade; reviewed contact matching and optional employee/user link. | Incompatible clients and ungranted module access rejected; no silent role elevation; privacy/import/backup coverage for added entities. |
+| Finance / MOD-FIN-01/02 | Opening totals and partial supplier/customer credit/refund, prior settlement, tax/rounding/period effects; reviewed budgets/dimensions, report totals and duplicate bank-file handling. | Concurrent over-credit/refund rejected; rollback/retry leaves one balanced source; AP/AR/GRNI/stock/GL tie-out and scoped exports. |
+| CRM / MOD-CRM-01 | Lead qualification, contact linking, stage/activity history, won/lost reasons and customer conversion. | Parallel/retried conversion creates one link; duplicate review preserves financial identities; team/search/field/export denial; no ledger effect. |
+| Sales / MOD-SLS-01/02 | Accepted price/discount/credit decisions; partial reserve/pick/dispatch/invoice/collection and stock return/credit; existing service AR regression. | Competing reservations/dispatch cannot oversell; cancellation releases eligible commitments; no double stock/COGS or AR under retry; stock/COGS/AR/tax/bank reconcile. |
+| Supply Chain / MOD-SCM-01/02 | Explainable demand/reorder; RFQ/quote selection and approved allocations; quarantine/release, count adjustment and invoiced/uninvoiced supplier returns. | No duplicate procurement of demand; warehouse denial and independent count/quality decision; stale stock version; original receipt/valuation and GRNI/AP/GL reconcile. |
+| HR / MOD-HR-01/02 | Employee lifecycle, own/manager leave/attendance, cancellation/balance and independent expense claim through Finance payable/confirmed payment. | No self-approval or duplicate claim posting/payment; concurrent leave preserves balances; denied peer/compensation/receipt access, offboarding/session revocation and retained history. Payroll excluded. |
+| Marketing / MOD-MKT-01 | Campaign plan and eligible audience; source links through lead/opportunity/order/invoice; model/window-specific deduplicated funnel and cost/net-revenue metrics. | No unauthorised audience/detail export; suppression overrides old snapshots/reimport; aggregate privacy and retention/restore replay; no journal for attributed pipeline or campaign plan. |
+| Optional outbound / MOD-MKT-02 | Approved provider and message intent; eligibility recheck, delivery result and unsubscribe. | Timeout after provider acceptance, duplicate/reordered callback, bounded retry/dead letters, revoked credentials and restore; pause/reconcile uncertain outcomes before resend. |
+
+For every module exercise typed IPC/contract validation, direct API denial, uncertain saves, state/version conflicts, keyboard/screen-reader/scaling, protected diagnostics and representative mixed-workload performance. Rehearse populated-database migration and isolated recovery, including external attachments if selected. Reapply post-backup restrictions/suppressions before access/jobs resume; row counts alone do not establish delivery correctness.
+
+Extend the section 11 release record with module/epic IDs, scope/metric definitions, posting-policy version, backfill/reconciliation results, new grant matrix, attachment/provider/job configuration references (no secrets), tests/results/defects, reviewers and rollback/resumption authority. Use existing build/test commands and add targeted cases when implementing; no new command or module installation mechanism is defined by this plan.

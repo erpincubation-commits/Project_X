@@ -40,3 +40,9 @@ The tool creates a uniquely named local test database, migrates it, seeds synthe
 ## Dependency override
 
 The lockfile overrides affected minimatch 7?10 dependencies used by the installer toolchain to patched 11.0.8 (compatible with this project's Node requirement). Older minimatch 3/5 consumers remain untouched. This addresses [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), which affects versions before 11.0.1 in that range. Validate packaging and packaged startup whenever changing this override; do not use an unreviewed forced electron-builder downgrade suggested by an audit resolver.
+
+## Planned module verification
+
+Reviewed 17 November 2026. [Roadmap MOD-* epics](ERP_MODULE_ROADMAP.md#5-candidate-backlog-and-acceptance) need incremental contract/unit, database/concurrency, real desktop, access/privacy, accessibility and recovery coverage as implemented. Current commands/results are not evidence for future module capabilities. Use the [module scenario matrix](SMB_ERP_TESTING_DEPLOYMENT_RUNBOOK.md#12-module-expansion-acceptance) to add cases to existing suites.
+
+Measure CRM searches/conversion, Sales reservation/dispatch/invoice contention, replenishment/quality, employee leave/claim decisions and campaign attribution/optional delivery under realistic roles and data sizes. Preserve zero duplicate sources/oversell, balanced postings and stock/AP/AR/GRNI/employee-payable reconciliation. Test denied team/manager/field/export access and suppression after audience creation/restore. Report workload conditions, per-operation latency, error rate, lock/pool pressure and actual screen/report times; the current customer harness or ten-actor pilot does not establish six-module or 50-user capacity. Select the workload and acceptance profile before a module release.

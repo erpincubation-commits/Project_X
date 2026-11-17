@@ -1,8 +1,8 @@
 # SMB ERP Desktop — Technical Requirements Document
 
 **Status:** Draft for engineering, operations, security, accounting and product review  
-**Version:** 0.1  
-**Date:** 15 November 2026  
+**Version:** 0.2\
+**Date:** 17 November 2026\
 **Product requirements:** [SMB ERP Desktop PRD](SMB_ERP_DESKTOP_PRD.md)  
 **Other inputs:** `ERP_Architecture.md`, `SMB_ERP_PRD.md` and the repository documentation.
 
@@ -30,13 +30,13 @@ Supported OS/database versions, hardware, first tax jurisdiction, deployment top
 
 ## 2. Current implementation baseline
 
-As documented in the repository at the time of this draft:
+Reviewed source baseline: application 0.2.0 / schema 7. The [user guide](USER_GUIDE.md) describes implemented workflows; the [module roadmap](ERP_MODULE_ROADMAP.md) defines proposed expansion. This review does not verify an installed database.
 
 | Area | Existing baseline | Still required for production ERP |
 | --- | --- | --- |
-| Desktop | Electron main process, sandboxed/context-isolated React renderer, constrained preload, customer screen and main-process API client. | Full workflows, accessibility verification, compatibility handling and release hardening. |
-| Server | NestJS API, request validation, admin/read-only access, customer list/create, session expiry and account login throttling. | MFA, granular authorisation, user administration, approvals and business modules. |
-| Data | PostgreSQL, schema migrations, customer audit events and idempotent customer creation. | Accounting, inventory and procurement schemas/invariants; production roles, migration and recovery controls. |
+| Desktop | Sandboxed/context-isolated renderer, constrained preload/main-process API, Customers, Purchasing, Accounting & stock, Orders & billing, Operations & privacy and Account security and access. | New module journeys, human accessibility acceptance, compatibility negotiation and release hardening. |
+| Server | Mandatory MFA, nine fixed roles, access management, request/payment approval, books/stock/trade/import/privacy services, sessions and authentication throttling. | Configurable scoped policies, complete account recovery, broader abuse controls and proposed modules. |
+| Data | PostgreSQL migrations through 7; source-linked stock/ledger/trade, audit/history/retry and limited import/privacy records. | Reviewed module migrations/backfills and financial correction/opening; production role configuration and recovery acceptance. |
 | Diagnostics | Structured desktop/server logs and request correlation; error handling. | Operational monitoring, alerting, retention and security acceptance. |
 | Delivery | Development commands, Windows NSIS packaging and a CI workflow are defined. | Signed, independently verified release; supported deployment, upgrade and recovery procedures. |
 
@@ -81,7 +81,7 @@ Packaging is currently Windows NSIS and the installer is per-user; final managed
 
 **TR-API-03 (P0):** Paginate and filter large lists using documented deterministic ordering and bounded page sizes. Reports and exports enforce the same data scope as interactive queries. Define timeouts and cancellation behaviour for long operations.
 
-**TR-API-04 (P0):** Mutating operations susceptible to retries must accept an idempotency key scoped to the authenticated actor and operation. Store the request fingerprint, outcome and business change atomically. Reuse with a different payload must fail as a conflict. Define a retention window that covers supported retry and reconciliation scenarios. Existing customer-create idempotency is a starting point, not blanket coverage.
+**TR-API-04 (P0):** Mutating operations susceptible to retries must accept an idempotency key scoped to the authenticated actor and operation. Store the request fingerprint, outcome and business change atomically. Reuse with a different payload must fail as a conflict. Define a retention window that covers supported retry and reconciliation scenarios. Current domain idempotency is a starting point; every new module needs an explicit operation/atomic retry boundary.
 
 **TR-API-05 (P0):** Handle concurrent updates with an explicit version or equivalent database locking strategy. A stale write returns a conflict and requires refresh or deliberate resolution. Transactions that affect financial records either commit all intended changes or none.
 
@@ -95,7 +95,7 @@ Packaging is currently Windows NSIS and the installer is per-user; final managed
 | --- | --- | --- |
 | TR-SEC-01 | P0 | Authenticate named users; use a proven password hashing algorithm with configurable work factor, secure account recovery and session revocation. Support MFA for privileged and other applicable users; select methods and recovery process during design. |
 | TR-SEC-02 | P0 | Store only hashed server-side session tokens; expire idle and absolute sessions, revoke sessions on administrative disablement, and prevent session disclosure through logs and errors. Existing 30-minute idle and eight-hour absolute settings require product confirmation. |
-| TR-SEC-03 | P0 | Enforce server-side permissions for each action and relevant data scope, including reports and exports. Define a role/permission matrix and deny by default. The present admin/read-only roles are insufficient for the full ERP. |
+| TR-SEC-03 | P0 | Enforce server-side permissions for each action and relevant data scope, including reports and exports. Define a role/permission matrix and deny by default. The present nine fixed roles do not provide configurable policies or future-module scopes. |
 | TR-SEC-04 | P0 | Implement approval separation-of-duties checks, including self-approval restrictions and independent payment approvals. Record delegation and authorised exceptions with actor, reason and time. |
 | TR-SEC-05 | P0 | Apply authentication throttling and abuse controls appropriate to on-premises deployment. Document limits, lockout/recovery and monitoring; avoid creating an easy permanent account-denial mechanism. |
 | TR-SEC-06 | P0 | Audit security events and material business changes with actor, UTC time, action, record, result and correlation reference. Restrict access and protect event integrity with operational controls independent of the normal application role. Do not claim absolute tamper-proofing. |
@@ -206,13 +206,15 @@ Critical financial, security, recovery or data-integrity failures block release.
 
 ## 12. Implementation sequence and dependencies
 
+Steps 1–6 retain the foundation target sequence; many business slices already exist as identified in section 2. Use PIL/FUP evidence to close remaining gaps rather than reimplementing delivered foundations. Step 7 gives the proposed expansion order.
+
 1. Agree supported environment, pilot customer, jurisdiction, accounting and stock policies; define the role matrix and transaction/posting specifications.
 2. Harden identity, user administration, MFA, permissions, audit, logging and the client/server compatibility contract; establish tested backup and recovery.
 3. Implement supplier and item masters, purchase requests and approvals; validate state transitions and concurrent access.
 4. Add purchase orders, receiving and inventory valuation with atomic source/audit/posting records and reconciliation.
 5. Add supplier invoices, three-way matching, accounts payable, payment controls, bank reconciliation, period close and essential reports.
 6. Complete migration rehearsal, privacy and security review, performance/accessibility testing, signed distribution and pilot acceptance before production.
-7. Scope sales, manufacturing, HR/payroll, integrations and country packs separately in the later phases described in the PRD.
+7. Follow the [module roadmap](ERP_MODULE_ROADMAP.md): core/Finance completion → CRM → Sales with basic stock fulfilment → Supply Chain expansion → HR core/expenses → Marketing. Payroll, manufacturing, projects, assets and country packs require separate scope. Existing pilot capacity is unchanged.
 
 ## 13. Open technical decisions
 
@@ -239,4 +241,22 @@ Critical financial, security, recovery or data-integrity failures block release.
 | `FR-INV-01`–`04` | TR-DATA-01–04, section 7.2 and section 11 reconciliation tests |
 | `FR-RPT-01`–`03`, `FR-INT-01`–`03` | TR-API-03 and 07, TR-ARC-03, TR-DATA-06, TR-PRV-01 |
 | PRD security, accessibility, privacy and operations | TR-DESK-01–07, TR-SEC-01–07, TR-PRV-01–03, TR-OPS-01–04, TR-NFR-01–05 |
-| Later sales, HR and manufacturing requirements | Section 12; detailed technical specifications required when each phase is approved. |
+| FR-CRM-01/02, FR-SLS-06, FR-SCM-01–03, FR-HR-05, FR-MKT-01–03, FR-FIN-09/10 | Section 15 and module roadmap epics; detailed contracts and module acceptance required before implementation. |
+
+## 15. Proposed module engineering requirements
+
+Reviewed 17 November 2026. These extend the implemented schema 7 baseline and remain design requirements; no new service, permission, endpoint or dependency is introduced by this document.
+
+| ID | Requirement | Verification required for the module release |
+| --- | --- | --- |
+| TR-MOD-01 | Keep cohesive CRM, Sales, HR and Marketing domain boundaries in the NestJS application and extend existing Finance/procurement/inventory services. Shared parties/items, one stock ledger and one GL remain authoritative; cross-domain writes use reviewed application interfaces. | Review ownership and typed contracts/IPC; reject calls that bypass posting/permission boundaries. No new microservice infrastructure is assumed. |
+| TR-MOD-02 | Preserve current customer codes, existing IDs and immutable source references through additive migrations/backfills. Store prospect conversion and contact links explicitly; employee identity is distinct from user identity. | Upgrade a populated schema 7 copy; counts/references/permissions and financial balances agree; duplicate concurrent conversions return one customer link. |
+| TR-MOD-03 | Define reservation availability and lock order. Reserve/release without moving on-hand; dispatch consumes eligible stock and commitments, posts valuation/COGS once and creates source allocations. Retain the company financial lock until measured redesign is justified. | Concurrent reservation/dispatch/cancel/return and interrupted-response tests; no oversell, duplicate cost, invoice over-allocation or control-account difference. |
+| TR-MOD-04 | Extend server action/record/field/export rules for Sales teams, warehouse scope, own/manager/HR access and Marketing audiences. Existing single fixed-role assignments cannot be silently interpreted as composable roles. | Direct API/search/report/history/export denials, reassignment/offboarding tests and least-privilege migration review. |
+| TR-MOD-05 | Specify complete state/version/correction rules for orders, sourcing, stock exceptions, leave, claims and campaigns. Finance owns new credits/refunds and employee-payable source posting. | Independent expected-result fixtures; denied self-approval, closed-period and over-allocation tests; no partial state/audit/ledger commits. |
+| TR-MOD-06 | Add new personal entities to import validation, discovery, holds, retention, export and recovery replay. Define attachment limits/type validation, access and protected storage/backup before enabling uploads. | Invalid batch rollback, scoped disclosure, secret-free logs and an isolated restore covering selected files and post-backup restrictions. |
+| TR-MOD-07 | If delivery/integrations are selected, persist committed delivery intent with an outbox or equivalent, deduplicate provider events, recheck eligibility at dispatch and bound retry/dead-letter processing. Keep jobs paused during restore. | Failure before/after provider acknowledgement, duplicate/reordered callbacks, unsubscribe before send, restart and restore tests; uncertain provider outcomes require reconciliation. |
+| TR-MOD-08 | Define metric formula, period/timezone, data source and freshness for pipeline, availability, budget and campaign attribution. Separate opportunity value, booked orders, posted net revenue and collected cash. | Recompute from synthetic source records; deduplicate conversion; enforce aggregate and drill-through visibility; benchmark changed mixed workloads. |
+| TR-MOD-09 | Record client/server/contracts/schema/module scope per release and block incompatible writes. New module tables require reviewed future migrations rather than an assumed schema number or plugin installer. | Compatibility, populated-database upgrade, signed installer and rollback/new-database recovery evidence; module-specific operator/user guide updates and docs check. |
+
+Trace proposed entities in [schema section 15](SMB_ERP_BACKEND_SCHEMA.md#15-proposed-module-extensions), access in [security section 12](SMB_ERP_SECURITY_AND_ACCESS.md#12-proposed-module-access-boundaries) and release scenarios in [testing section 12](SMB_ERP_TESTING_DEPLOYMENT_RUNBOOK.md#12-module-expansion-acceptance). Scheduling and acceptance remain future work.

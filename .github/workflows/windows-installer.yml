@@ -36,10 +36,16 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: npm
+      - name: Check user guide updates
+        run: node tools/check-user-guide.mjs --base "$DOCS_BASE_SHA" --head "$DOCS_HEAD_SHA"
+        env:
+          DOCS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DOCS_HEAD_SHA: ${{ github.sha }}
       - run: npm ci
       - run: npm run auth:configure
       - run: npm run build

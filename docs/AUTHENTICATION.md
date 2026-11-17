@@ -13,7 +13,7 @@ npm start
 
 `auth:configure` adds missing `MFA_ENCRYPTION_KEY` and `ADMIN_SETUP_TOKEN` values to the ignored server `.env`; it preserves existing values and database credentials. Known placeholders from `.env.example` are replaced with generated values. Keep this configuration private and back up the MFA key securely. Changing or losing the key makes stored authenticator seeds unreadable; do not generate a replacement on a live deployment.
 
-Migration 3 preserves accounts/customers, adds MFA/challenge/recovery data, expands the role constraint, allows unauthenticated audit actors, and invalidates legacy sessions. The current server requires schema version **6**, which includes [purchasing](PROCUREMENT.md) and [accounting/inventory](ACCOUNTING_INVENTORY.md). Schema 6 adds [orders, invoicing, settlements and reports](TRADE_WORKFLOWS.md). Upgrade client and server together. Do not run an older server against a newer database. Code changes do not automatically migrate an existing installation.
+Migration 3 preserves accounts/customers, adds MFA/challenge/recovery data, expands the role constraint, allows unauthenticated audit actors, and invalidates legacy sessions. The current server requires schema version **7**, including [purchasing](PROCUREMENT.md), [accounting/inventory](ACCOUNTING_INVENTORY.md), schema 6 [trade workflows](TRADE_WORKFLOWS.md) and schema 7 [imports/privacy](IMPORTS_AND_PRIVACY.md). Upgrade client and server together using the [operations runbook](OPERATIONS_RUNBOOK.md). Do not run an older server against a newer database. Code changes do not automatically migrate an existing installation.
 
 ## First administrator on a new database
 
@@ -73,3 +73,9 @@ Authentication responses have `Cache-Control: no-store`. Challenges cannot authe
 `npm test` covers RFC vectors, replay protection, authenticated encryption, contracts and logging. `npm run test:integration` and `npm run test:desktop` create a disposable database before running isolated-schema tests and drop it afterward. The development account needs `CREATE DATABASE`; never use production credentials. Interrupted runs may require an administrator to inspect/remove their specifically named `erp_test_...` databases.
 
 The desktop test exercises first-run setup, MFA enrolment for two accounts, provisioning, audit viewing and shared customer access. Automation may require the normal Windows account because restricted execution cannot launch Electron's sandboxed runtime. Keep sandboxing enabled; see [development permissions](DEVELOPMENT.md#windows-development-permissions).
+
+## Planned module permissions
+
+Reviewed 17 November 2026. The [six-module roadmap](ERP_MODULE_ROADMAP.md) requires CRM/Sales team scope, warehouse scope, own/manager/HR boundaries, employee claim decisions and Marketing audience/export/delivery grants. These permissions and configurable/composable roles are proposed; the nine-role registry and single role per account remain current. No existing account receives new module access through this plan.
+
+Define grants and their migration explicitly, preserve session revocation and independent approvals, and test direct API/search/report/field/export denials. Employee records are separate from login accounts; offboarding requires authorised account disablement and session revocation. Integration identities and payroll access require separate design. See [proposed module access](SMB_ERP_SECURITY_AND_ACCESS.md#12-proposed-module-access-boundaries).

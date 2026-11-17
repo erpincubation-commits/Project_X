@@ -16,6 +16,7 @@
     "playwright-core": "^1.0.0"
   },
   "scripts": {
+    "docs:check": "node tools/check-user-guide.mjs",
     "auth:configure": "node tools/init-env.mjs",
     "setup": "node tools/init-env.mjs && npm run db:setup",
     "build": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run build -w @erp/server && npm run build -w @erp/desktop",
