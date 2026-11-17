@@ -1,8 +1,8 @@
 # SMB ERP Desktop — Application Flow
 
 **Status:** Draft for product, operations and engineering review  
-**Version:** 0.1  
-**Date:** 15 November 2026  
+**Version:** 0.2\
+**Date:** 17 November 2026\
 **Related documents:** [Desktop PRD](SMB_ERP_DESKTOP_PRD.md), [Technical requirements](SMB_ERP_TECHNICAL_REQUIREMENTS.md), [Current migration status](DESKTOP_MIGRATION.md)
 
 This document maps the user's journey through the Windows desktop application and its shared on-premises server. It is based on the supplied web PRD and architecture, adapted to the agreed Electron desktop, NestJS server and PostgreSQL stack. The original documents are reference material, not a description of the current implementation.
@@ -23,8 +23,8 @@ flowchart TD
     G --> E
     F -- Yes --> H[Open role-appropriate workspace]
     H --> I[Customers: current workflow]
-    H --> J[Procurement, inventory and finance: planned P0]
-    H --> K[Sales and other modules: later]
+    H --> J[Purchasing, books, stock and trade: implemented foundation]
+    H --> K[CRM, full Sales, HR and Marketing: planned expansion]
     I --> L[Sign out]
     J --> L
     K --> L
@@ -34,20 +34,20 @@ All business data is shared through the customer-operated application server. Th
 
 ## 2. Roles and workspace access
 
-The current app has an **administrator** who can create and view customers and a **read-only user** who can view them. The roles below describe proposed ERP responsibilities; the final permissions, record scopes and approval thresholds require a reviewed access matrix. Server-side authorisation remains decisive regardless of what a screen displays.
+The current schema 7 app has nine fixed roles and one role per account. [User guide roles/navigation](USER_GUIDE.md#roles-and-navigation) and [authentication](AUTHENTICATION.md) describe actual grants. The table below distinguishes implemented responsibilities from proposed configurable scope. Server-side authorisation remains decisive.
 
-| Role | Expected workspace and actions | Status |
+| Role | Workspace and actions | Status |
 | --- | --- | --- |
-| Administrator | Configure users, permissions, organisation, approvals and operational settings; review access and audit information. | Customer administrator exists; broader administration planned P0. |
-| Requester | Create purchase requests and track their decisions. | Planned P0. |
-| Approver | Review assigned requests or payment batches and approve or reject within delegated authority. | Planned P0. |
-| Purchasing | Maintain suppliers and create or manage purchase orders. | Planned P0. |
-| Warehouse | Receive goods, record discrepancies and review stock. | Planned P0. |
-| Accounts payable / finance | Review invoices, matches, payments, ledger entries and reconciliation. | Planned P0. |
-| Management / auditor | View authorised reports, decisions and audit records. | Planned P0 for essential reports; expanded dashboards later. |
-| Sales, HR and operations | Work on approved sales, employee and manufacturing workflows. | Later. |
+| Administrator | Customers, masters, books initialisation, access, imports/privacy and authorised audit. | Implemented; no business approval/payment execution grant. Configurable policy is planned. |
+| Requester | Create and track own purchase requests. | Implemented. |
+| Business approver | Decide other users' assigned requests, invoice price exceptions and payment batches. | Independent decisions implemented; configurable limits/delegation planned. |
+| Purchasing | Maintain suppliers/items, issue orders and cancel remaining quantities. | Implemented; extended sourcing planned. |
+| Inventory manager | Receive goods and maintain warehouses/stock. | Implemented; no financial statement access; dispatch/quality scopes planned. |
+| Accountant | Invoices, payment preparation/recording, collections, books and reconciliation. | Implemented; financial correction/opening extensions planned. |
+| Reader / identity administrator / auditor | Customer read / restricted reader provisioning / authorised broad read and audit. | Implemented distinct roles; consult actual grants. |
+| CRM/Sales, HR and Marketing | Prospect/commercial, employee and campaign workflows. | Planned; no corresponding role grants exist. |
 
-One user may have several roles if authorised. Separation-of-duties rules may prevent the same user from performing specific combinations, including self-approval or payment approval. Rules and exception handling must be agreed before implementation.
+Composable roles are a proposed access redesign, not current behaviour. Preserve self-approval restrictions and two distinct payment approvers through that redesign. Future module record/field/export scopes require review before implementation.
 
 ## 3. Installation, connection and sign-in
 
@@ -60,15 +60,15 @@ One user may have several roles if authorised. Separation-of-duties rules may pr
 1. Customer IT prepares the application server, PostgreSQL, network access, trusted certificate, accounts and backups using approved deployment procedures.
 2. IT installs a signed, supported desktop version on each workstation and supplies the server's HTTPS address.
 3. The user opens the application, enters the server address and selects **Connect**. The client verifies connectivity and certificate trust.
-4. If the connection succeeds, the user signs in with an assigned account. Where configured, the user completes MFA.
+4. If the connection succeeds, the user signs in with an assigned account. The user completes mandatory MFA; first use includes authenticator enrolment and recovery-code acknowledgement.
 5. The server authenticates the user and the desktop opens the workspace permitted by that user's roles. An incompatible client is directed to upgrade before unsafe operations.
 
-MFA, the complete administrative setup and compatibility checks are planned, not current features. A database password is a server deployment credential and is not entered in the desktop sign-in screen.
+Initial administrator enrolment, mandatory TOTP MFA/recovery codes and user access management are current features. Full password/MFA recovery and client/server compatibility negotiation remain planned. A database password is a server deployment credential and is not entered in the desktop sign-in screen.
 
 ### 3.2 Current sign-in and sign-out
 
 1. On the connection screen, enter the server address and select **Connect**. On the same computer, the local development address is the default; remote servers need HTTPS.
-2. Enter the email and password of a provisioned account and select **Sign in**. A successful login opens the customer register.
+2. Enter the email and password of a provisioned account and select **Sign in**. Complete mandatory MFA; first sign-in includes authenticator enrolment and recovery-code acknowledgement. Successful authentication opens the permitted workspaces; follow the [current sign-in guide](USER_GUIDE.md#sign-in-and-set-up-mfa).
 3. An invalid login or connection failure is displayed on screen. Diagnostic logs can be opened from the application.
 4. Select **Sign out** to clear the local session and return to the connection screen. If the server cannot be reached, local sign-out still occurs; the server session expires according to its configured limits.
 
@@ -88,7 +88,7 @@ flowchart TD
     J --> K[Shared record appears]
 ```
 
-The server checks permissions and validation, writes the customer and its audit event, and records the retry result in the same transaction. The administrator can retry the same pending creation without intentionally creating a second customer. A read-only user can list customers but cannot create them. This workflow does not yet implement sales orders, invoicing, accounting or the other planned modules.
+The server checks permissions and validation, writes the customer and its audit event, and records the retry result in the same transaction. The administrator can retry the same pending creation without intentionally creating a second customer. A read-only user can list customers but cannot create them. Customer creation alone creates no invoice or journal. Separate service invoicing and accounting are implemented; sales orders, CRM and stocked dispatch remain planned.
 
 ## 5. Planned application navigation
 
@@ -102,13 +102,16 @@ After sign-in, a proposed role-aware workspace would expose only the modules the
 | Finance | Supplier invoices, payment batches, ledger, bank reconciliation and period close. | P0. |
 | Reports | Permission-controlled operational and financial reports. | Essential reports P0; broader analytics later. |
 | Administration | Users, roles, approval rules and authorised configuration/audit views. | P0. |
-| Sales, HR, manufacturing and projects | Their respective workflows and reports. | Later, except the current customer register. |
+| CRM and Sales | Contacts, pipeline, quotations, sales orders and fulfilment. | Roadmap phase 2; current customer register/service AR remain available. |
+| Supply Chain extensions | Replenishment, sourcing, quality and stock controls. | Phase 3; basic reservations/dispatch accompany Sales in phase 2B. |
+| HR | Employees, leave/attendance and expenses. | Phase 4; payroll separately gated. |
+| Marketing | Campaigns, eligible audiences and source/results reporting. | Phase 5; outbound delivery separately gated. |
 
 Users should be able to move from a summary to its source document, view permitted related records and return to their work queue. Keyboard access, clear focus, validation errors and empty/loading states are required across flows.
 
-## 6. Planned procure-to-pay flow — P0
+## 6. Procure-to-pay target — implemented foundation and planned controls
 
-The first complete ERP release follows a purchase from request to reconciled payment. RFQ/quotation comparison is an open scope decision, not a required step in the flow below.
+The request → approval → order → accepted receipt → matched invoice → two-approver payment recording path is implemented. The target below also includes planned budgets, configurable approvals/tolerances and supplier payment-detail controls; use [current trade workflows](TRADE_WORKFLOWS.md) for actual steps. RFQ/quote comparison is proposed phase 3 work and is not required for the current path.
 
 ```mermaid
 flowchart TD
@@ -162,12 +165,12 @@ flowchart TD
 5. An authorised user records payment and allocation after the actual payment method has been agreed and performed. Banking integration and automatic external transfers are not assumed.
 6. Finance reconciles the payment, bank statement, payable balance and ledger. Each transaction links back to its source and approval history.
 
-## 7. Planned inventory and finance flows — P0
+## 7. Inventory and Finance target — implemented foundation and planned extensions
 
 ### Inventory
 
 1. An authorised user opens stock by item, warehouse and location, with available source movements.
-2. Receipts, transfers and approved adjustments create traceable movements with reason and actor. Negative stock is prevented or explicitly controlled by policy.
+2. Receipts, transfers and approved adjustments create traceable movements with reason and actor. Negative stock remains blocked under the current policy.
 3. Finance and warehouse users compare stock valuation and movements with the ledger and resolve discrepancies. The valuation method and posting rules require accounting review.
 
 ### Period close and reports
@@ -187,7 +190,7 @@ An authorised administrator provisions a named user, assigns the minimum require
 
 ### Data requests and retention
 
-An authorised privacy administrator locates relevant personal records, reviews the request and produces an appropriate export, correction, restriction or deletion/anonymisation outcome. The organisation decides how applicable legal and financial retention obligations affect each request. Audit the decision and handle backups according to the approved retention and restore procedures. These are planned capabilities and do not independently establish GDPR compliance.
+An authorised privacy administrator locates relevant personal records, reviews the request and produces an appropriate export, correction, restriction or deletion/anonymisation outcome. The organisation decides how applicable legal and financial retention obligations affect each request. Audit the decision and handle backups according to the approved retention and restore procedures. Current limited schema 7 case tools are described in [imports/privacy](IMPORTS_AND_PRIVACY.md); broader discovery, retention and future-module coverage remain planned and do not independently establish GDPR compliance.
 
 ### Backup, restore and upgrade
 
@@ -200,26 +203,33 @@ Customer IT monitors scheduled encrypted backups and periodically restores a rep
 | Server unavailable or address invalid | Show a connection error; user checks the address/network or contacts IT, then retries. | Basic connection error exists; richer guidance planned. |
 | Untrusted or invalid certificate | Reject the connection; direct the user to IT to correct trust or certificate configuration. Do not offer a bypass. | Security boundary exists; wording and acceptance tests remain to be reviewed. |
 | Invalid credentials or expired session | Show a safe error; user signs in again or follows the approved recovery process. | Login and session expiry exist; account recovery planned. |
-| Permission denied | Explain that the action is unavailable and direct the user to an administrator where appropriate. Server rejects the action even if directly requested. | Customer admin/read-only enforcement exists; granular roles planned. |
+| Permission denied | Explain that the action is unavailable and direct the user to an administrator where appropriate. Server rejects the action even if directly requested. | Nine fixed roles enforced; configurable and future-module scope planned. |
 | Input invalid or duplicate | Show actionable validation or duplicate feedback; allow correction without losing unrelated input where feasible. | Customer validation exists; ERP-wide behaviour planned. |
-| Connection lost during a write | Distinguish an unsent change from an uncertain outcome; reconnect and check the server record. Retry with the same operation identity where supported. Do not silently queue financial writes. | Customer creation has retry handling; full transaction flow planned. |
-| Competing changes | Reject stale or conflicting updates and let the user refresh and resolve them. | Planned P0. |
-| Match or approval exception | Hold the affected item, show its reason and assigned reviewer, and record the authorised decision. | Planned P0. |
+| Connection lost during a write | Distinguish an unsent change from an uncertain outcome; reconnect and check the server record. Retry with the same operation identity where supported. Do not silently queue financial writes. | Current domain mutations have idempotency; every future module must extend it. |
+| Competing changes | Reject stale or conflicting updates and let the user refresh and resolve them. | Implemented version checks; extend to new entities. |
+| Match or approval exception | Hold the affected item, show its reason and assigned reviewer, and record the authorised decision. | Fixed request/payment decisions and invoice price exceptions implemented; broader policies planned. |
 | Client/server version mismatch | Block unsupported operations and provide upgrade instructions. | Planned P0. |
 
 For support, share the on-screen diagnostic reference and approved log entries with an administrator. Do not share credentials or the `.env` file.
 
-## 10. Later-phase flows
+## 10. Planned module flows
 
-| Flow | Proposed journey | Phase |
+| Flow | Proposed journey | Roadmap phase / candidate epic |
 | --- | --- | --- |
-| Order to cash | Customer/quotation → sales order → delivery → invoice → receipt → receivables and ledger reconciliation; returns and credits when needed. | P1; existing customer creation is only a small starting point. |
-| Fixed assets | Register asset → capitalise → calculate depreciation → disposal → ledger. Detailed scope remains to be approved. | P1, separately specified. |
-| Manufacturing | Maintain bill of materials → work order → material consumption → finished output → inventory and accounting. | P2. |
-| HR and expenses | Employee record → leave or expense request → approval → appropriate accounting/payment. Payroll requires a reviewed jurisdiction. | P2. |
-| Projects and advanced extensions | Project delivery/billing, portals, multi-company and advanced analytics require separate scope and acceptance criteria. | Later. |
+| CRM to Sales | Contact/lead → qualification → opportunity → duplicate-reviewed customer link/conversion → quotation → accepted sales order. | 2A/2B; MOD-CRM-01 and MOD-SLS-01. No journal for qualification, quote or order. |
+| Stocked order to cash | Order → reserve → pick/partial dispatch → linked invoice → confirmed collection; linked return/credit/refund for correction. | 2B; MOD-SLS-02. Current service AR continues without stock/COGS. |
+| Supply Chain | Explainable shortage → reviewed request → RFQ/quote selection → approved order → receipt/quality → invoice/payment; supplier return/count exceptions. | 3; MOD-SCM-01/02. Current purchasing path remains supported. |
+| HR and expenses | Employee → leave/attendance → scoped independent review; expense claim → approval → Finance payable → confirmed settlement. | 4; MOD-HR-01/02. Payroll separately specified. |
+| Marketing | Campaign plan → permitted audience/source → CRM lead/opportunity → order/invoice attribution → cost/funnel review. | 5; MOD-MKT-01. Sending is optional MOD-MKT-02 after provider gate. |
+| Manufacturing, assets, projects, portals and multi-company | Production, depreciation, project delivery/billing and advanced extensions. | Conditional later scope with separate requirements; no first-increment commitment. |
 
-Mobile approvals and warehouse use were present in the source web PRD. A mobile or browser client is not part of the agreed first release; the business need and secure delivery approach remain open decisions.
+Planned order states distinguish acceptance, fulfilment, billing and closure. Cancelling an outstanding quantity releases only eligible reservations; it does not erase prior dispatch/invoices. Physical return and financial credit are related but separate events. Reconnect/retry must not repeat stock, cost, billing or settlement.
+
+Planned HR leave uses own/manager/HR views with balanced allocations under concurrent decisions. Claimants cannot approve their claims. Employee offboarding initiates an authorised access review; deleting an employee is not a login-revocation mechanism.
+
+Planned Marketing audience snapshots do not override later suppression. Any future send rechecks eligibility; withdrawal prevents unsent messages under the defined policy. Recovery keeps delivery paused until restrictions and external message outcomes are reconciled. Campaign attribution and opportunity wins do not post revenue.
+
+Phase order, epic dependencies and acceptance are owned by the [module roadmap](ERP_MODULE_ROADMAP.md). All new flows in this section remain proposed. Mobile/browser approvals and warehouse access remain open product decisions; the desktop requires server connectivity.
 
 ## 11. Flow acceptance and open decisions
 

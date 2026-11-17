@@ -1,8 +1,8 @@
 # SMB ERP Desktop — Backend Schema Document
 
 **Status:** Draft for engineering, database, security and accounting review  
-**Version:** 0.1  
-**Date:** 15 November 2026  
+**Version:** 0.2\
+**Date:** 17 November 2026\
 **Related documents:** [Product requirements](SMB_ERP_DESKTOP_PRD.md), [Technical requirements](SMB_ERP_TECHNICAL_REQUIREMENTS.md), [Application flow](SMB_ERP_APP_FLOW.md), [Deployment](DEPLOYMENT.md)
 
 ## 1. Purpose and scope
@@ -15,7 +15,7 @@ INR and perpetual moving weighted average with negative stock blocked are select
 
 ## 2. Current implementation
 
-**Implementation update:** Migration 3 adds MFA and authentication versions; migration 4 adds purchasing; migration 5 adds nine roles, company books, accounts, periods, journals/lines, warehouses, stock balances, immutable movements/entries and bank reconciliations/statement lines. Migration 6 adds orders/lines, receipts/lines, tax codes, AP/AR invoices/lines, payment allocations/decisions, collections, unique bank references and source posting controls; see [trade schema](../apps/server/src/database/trade-migration.ts) and [workflows](TRADE_WORKFLOWS.md). The financial foundation is in [books-migration.ts](../apps/server/src/database/books-migration.ts); see [accounting/inventory](ACCOUNTING_INVENTORY.md) and [posting rules](ACCOUNTING_POSTINGS.md). See [the migration source](../apps/server/src/database/migrate.ts), [authentication](AUTHENTICATION.md) and [procurement](PROCUREMENT.md) for the current physical schema and controls. The tables below describe the original migration 1–2 baseline; subsequent domain tables remain design proposals unless identified in those implementation documents.
+**Implementation update:** Migration 3 adds MFA and authentication versions; migration 4 adds purchasing; migration 5 adds nine roles, company books, accounts, periods, journals/lines, warehouses, stock balances, immutable movements/entries and bank reconciliations/statement lines. Migration 6 adds orders/lines, receipts/lines, tax codes, AP/AR invoices/lines, payment allocations/decisions, collections, unique bank references and source posting controls; see [trade schema](../apps/server/src/database/trade-migration.ts) and [workflows](TRADE_WORKFLOWS.md). The financial foundation is in [books-migration.ts](../apps/server/src/database/books-migration.ts); see [accounting/inventory](ACCOUNTING_INVENTORY.md) and [posting rules](ACCOUNTING_POSTINGS.md). See [the migration source](../apps/server/src/database/migrate.ts), [authentication](AUTHENTICATION.md) and [procurement](PROCUREMENT.md) for the current physical schema and controls. Migration 7 adds operational import/privacy/checksum records as described in the extension below. The tables below describe the original migration 1–2 baseline; subsequent domain tables remain design proposals unless identified in those implementation documents.
 
 The authoritative definition is [migrate.ts](../apps/server/src/database/migrate.ts). Migrations 1 and 2 define the following tables; `erp_schema_migrations` records applied versions. The schema shown here is not a substitute for checking the actual database's applied migrations.
 
@@ -23,13 +23,13 @@ The authoritative definition is [migrate.ts](../apps/server/src/database/migrate
 | --- | --- | --- |
 | `erp_schema_migrations` | `version INTEGER` PK; `applied_at TIMESTAMPTZ NOT NULL DEFAULT now()` | Applied schema versions. |
 | `erp_customers` | `code VARCHAR(32)` PK with uppercase alphanumeric/underscore/hyphen check; `name VARCHAR(160) NOT NULL` and nonblank check; `created_at TIMESTAMPTZ NOT NULL` default current time. | Shared customer register; customer code is currently the primary key. |
-| `erp_users` | `id UUID` PK; unique `email VARCHAR(254) NOT NULL`; `password_hash TEXT NOT NULL`; `role TEXT NOT NULL` restricted to `admin`/`reader`; `active BOOLEAN NOT NULL DEFAULT true`; `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`. | Named local accounts and current two-role access model. |
+| `erp_users` | `id UUID` PK; unique `email VARCHAR(254) NOT NULL`; `password_hash TEXT NOT NULL`; `role TEXT NOT NULL` restricted to `admin`/`reader`; `active BOOLEAN NOT NULL DEFAULT true`; `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`. | Historical migration 1–2 accounts and two-role access shape; superseded by later migrations. |
 | `erp_sessions` | `token_hash TEXT` PK; `user_id UUID NOT NULL` FK to users; `expires_at TIMESTAMPTZ NOT NULL`; `last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now()`; index on `user_id`. | Hashed session tokens and expiry tracking. |
 | `erp_login_attempts` | `email VARCHAR(254)` PK; `attempts INTEGER NOT NULL DEFAULT 0`; `window_started TIMESTAMPTZ NOT NULL DEFAULT now()`. | Sign-in throttling. |
 | `erp_audit_events` | `id BIGSERIAL` PK; `actor_id UUID NOT NULL` FK to users; `action TEXT`, `entity_type TEXT`, `entity_id TEXT`, `occurred_at TIMESTAMPTZ`, `changes JSONB`, all required. | Current business/security audit records. |
 | `erp_idempotency` | `actor_id UUID` FK to users and `request_id UUID`, composite PK; `payload JSONB NOT NULL`, `response JSONB NOT NULL`. | Customer-create retry records. |
 
-Customer creation, its audit entry and retry response are committed in one database transaction. The audit trigger rejects ordinary updates, deletes and truncation; a database owner can bypass it, so it is not tamper-proof. Existing schema does not implement MFA, granular roles, suppliers, purchase orders, stock or accounting. The planned model below is a target, not a description of these tables today.
+Customer creation, its audit entry and retry response are committed in one database transaction. The audit trigger rejects ordinary updates, deletes and truncation; a database owner can bypass it, so it is not tamper-proof. The table above is the historical migration 1–2 shape: migrations 3–7 implement MFA, nine fixed roles, suppliers, procurement, stock, accounting and operational records. In particular, the listed two-role user constraint is superseded. The logical target below is not a replacement physical schema. Current source requires schema 7; check the installed database separately.
 
 ## 3. Modelling conventions for the proposed schema
 
@@ -71,7 +71,7 @@ This is a conceptual diagram, not a complete schema. Purchases may combine reque
 
 ## 5. Proposed P0 identity, security and workflow
 
-The following tables supplement or replace parts of the existing model via explicit migrations; they do not yet exist.
+The following logical target may supplement or evolve current physical tables via reviewed migrations. Some underlying capabilities already exist under different names/shapes; these rows do not assert that all such capabilities are absent. Configurable roles/policies and organisation ownership remain proposed.
 
 | Entity | Proposed fields | Keys and rules |
 | --- | --- | --- |
@@ -130,7 +130,7 @@ RFQ entities, supplier attachments and document transmission are undecided. Do n
 | `stock_balances` | `organisation_id FK`, `item_id FK`, `location_id FK`, `quantity NUMERIC(20,6)`, `version BIGINT` | Composite PK `(organisation_id, item_id, location_id)`; maintained transactionally as a projection and reconcilable to movements. Lock/update safely for concurrent writes. |
 | `inventory_valuation_entries` | `id UUID PK`, `stock_movement_id FK`, `amount NUMERIC(19,4)`, `currency CHAR(3)`, `valuation_method_version TEXT`, journal link | Record cost and traceability according to the approved valuation method; reconcile to inventory control accounts. |
 
-Negative-stock policy, cost layers versus average cost, stock reservations, returns, unit conversions and adjustment approvals require explicit decisions. Do not assume a particular valuation method in migrations.
+Current stock uses moving weighted average and blocks negative stock. Reservations, returns, unit conversions and independent adjustment approval remain proposed; they must preserve the current valuation policy unless an explicitly reviewed migration changes it.
 
 ## 9. Proposed P0 finance and accounting
 
@@ -202,8 +202,31 @@ Production schema migrations require versioned scripts, review, staging rehearsa
 
 Before implementing P0, agree the first jurisdiction, base currency, tax treatment, accountant-reviewed posting matrix, precision and rounding, inventory valuation/negative-stock policy, supplier invoice duplicate policy, role/approval matrix, document state transitions, bank integration, retention, encryption/key ownership, and supported PostgreSQL version. Confirm whether `organisation_id` is required in the first physical schema and how to enforce ownership consistently.
 
-Later modules require their own reviewed schema: sales quotes/orders/deliveries/invoices and returns; fixed assets and depreciation; manufacturing BOM/work orders; projects and billing; HR, leave, expenses and jurisdiction-specific payroll; integration events and webhooks. Their names here are planning placeholders, not implemented tables or approved data models.
+The [module roadmap](ERP_MODULE_ROADMAP.md) now scopes CRM, Sales, Supply Chain, HR and Marketing extensions alongside Finance. Section 15 supplies their proposed logical entities and invariants. Existing customer service invoices/collections remain physical schema 6 capabilities; sales orders/dispatch are new work. Fixed assets, manufacturing, projects and jurisdiction-specific payroll remain conditional later scope.
 
 ## Schema 7 operational extension
 
 Added erp_import_batches and erp_privacy_cases; privacy_restricted constraints on users/suppliers; checksum baselines on erp_schema_migrations. No posted financial records are changed by this migration. See [imports/privacy](IMPORTS_AND_PRIVACY.md) for fields/lifecycle and [operations](OPERATIONS_RUNBOOK.md) for upgrade checks.
+
+## 15. Proposed module extensions
+
+Reviewed 17 November 2026 against the 0.2.0 / schema 7 source baseline. All names below are proposed logical entities, not executable DDL, assigned migration versions or new deployed tables. Reuse current customers, suppliers, items, warehouses, invoices, collections and journals; do not create parallel stock/financial ledgers. Apply the common version, exact-number, date, retention and ownership conventions, while retaining current INR two-place money and six-place quantities.
+
+| Domain / roadmap epic | Proposed entities and key links | Required constraints and migration design |
+| --- | --- | --- |
+| Shared parties / MOD-PLT-01 | `contacts`, `addresses`, explicit customer/supplier contact links; stable IDs with preserved current customer code mapping. | Contact-to-organisation links may be many-to-many; unique link pairs; matching email is a deduplication candidate, not authority to merge financial identities. No new surrogate customer PK without a compatible backfill/API plan. |
+| CRM / MOD-CRM-01 | `leads`, `opportunities`, `opportunity_stage_events`, `activities`, explicit `lead_customer_conversions`; owner/team, source/campaign link and next-action date. | Conversion unique per lead, atomic with customer creation/link and audit/retry; stage transitions versioned; activity references resolve through real FKs or a governed registry; customer conversion creates no journal. |
+| Sales / MOD-SLS-01 | `quotations`, `quotation_lines`, `sales_orders`, `sales_order_lines`, accepted quote/order version, customer/item references and price/tax snapshots. | Unique document/line identifiers; authorised credit/discount decisions tied to version; aggregate ordered/delivered/billed/returned limits; cancellation closes remaining commitments and preserves already posted sources. |
+| Stock fulfilment / MOD-SLS-02 | `stock_reservations` linked to order line and item/warehouse; `deliveries`, `delivery_lines`, reservation consumption and invoice-source allocations. | Active reserved quantity cannot exceed the reviewed availability rule; atomic concurrent reserve/release/dispatch; unique source movement/journal links. Reservation does not change physical stock or post. Dispatch uses existing movement/valuation boundaries and reviewed COGS account mapping. |
+| Financial corrections / MOD-FIN-01 | Supplier/customer credit headers/lines, explicit original invoice/receipt/delivery allocation links, refund/settlement allocations and opening-batch provenance. | Credits/returns cannot exceed remaining source quantity/value after prior corrections; bound settlement after prior payments/credits; separate physical return from financial credit; preserve original cost/tax and reviewed variance; one balanced posting per source and open-period enforcement. |
+| Budget/reporting / MOD-FIN-02 | `cost_centres`, budget versions/lines, reviewed journal/source dimensions and `bank_import_batches` with external line fingerprints. | Totals derive from posted sources, not a second ledger; dimension ownership and valid effective dates; duplicate statement import guard and reviewed split-match allocation limits. |
+| Sourcing / MOD-SCM-01 | Reorder policies/suggestion snapshots, RFQs/lines, supplier quotations/lines and explicit demand-to-order allocations. | Define on-hand/reserved/inbound/demand computation and unit consistency; no duplicate conversion of demand; replace one-request/one-order only with a migration preserving old links and quantity ceilings. Suggestions/RFQs create no stock or journal. |
+| Stock control / MOD-SCM-02 | Quality/hold decisions, count sheets/lines, approved adjustment links and supplier return allocations. | Separate sellable/quarantined quantities without double-counting valuation; independent approval tied to counted stock version; retain immutable original movements; invoiced and uninvoiced return paths reconcile GRNI/AP/stock/GL. |
+| HR / MOD-HR-01 | `departments`, `designations`, `employees`, manager/lifecycle events, optional user link, leave policies/allocations/applications/ledger and attendance entries/corrections. | Employee and login IDs are distinct; define effective-dated employment/manager links without cycles; unique attendance under agreed day/shift rules; concurrent leave approval/cancellation preserves allocation and overlap rules; salary/medical fields excluded from the initial core model. |
+| Claims / MOD-HR-02 | `expense_claims`, claim lines, independent decisions, protected receipt-file references and employee-payable/settlement source links. | No self-approval; claimant/employee ownership; exact reviewed expense/tax totals; one source posting and bounded confirmed settlements; no fake supplier mapping or payroll dependency. Attachment access/retention requires a storage decision. |
+| Marketing / MOD-MKT-01 | `campaigns`, eligibility preferences/evidence references, `suppressions`, audience membership snapshots, source touchpoints and conversion attribution links. | Purpose/channel/time scope; suppression applies across campaigns; deduplicate contact membership and attributed outcomes under a fixed model/window; actual expense/revenue uses Finance references. Protect evidence and do not copy sensitive CRM/HR fields into audiences. |
+| Optional delivery / MOD-MKT-02 | Governed outbox/delivery intent, attempts, provider identifiers/callback deduplication and job checkpoints. | Unique message/recipient intent and callback identity; recheck eligibility before send, including changed preferences after audience snapshot; bounded retries, safe terminal/uncertain states and restore reconciliation. No delivery service is currently introduced. |
+
+Migrations must extend source-kind validation, constraints, permissions, history/audit, retry payload minimisation, import/privacy discovery and backup/restore verification together. Existing code-keyed customer references, posted source types and recovery allowlists require explicit compatibility review; simply adding a table or generic type/id string is insufficient.
+
+Before implementation, approve state machines, enforcement points and deletion/retention per entity. Require populated-schema upgrade/backfill evidence, denied cross-scope reads/exports, concurrency and rollback tests, and independent stock/GL/employee-payable reconciliation. Payroll tables/calculations, foreign currency and multi-company are outside these initial extensions.

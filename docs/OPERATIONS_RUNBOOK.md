@@ -56,3 +56,11 @@ Record incident times, affected services, correlation IDs, operator actions, app
 ## CI release gates
 
 The Windows installer workflow now gates packaging on server type/unit/API/security/recovery/load checks, then real Windows desktop flows with accessibility scans and the packaged startup smoke. Linux recovery uses the PostgreSQL service container's matching dump/restore binaries. The Windows job creates a separate development cluster using the PostgreSQL binaries supplied by the [official Windows runner image](https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md); image changes may require PG_BIN configuration. Reports are uploaded without database archives or keys. These workflow changes must still be exercised by your GitHub runner; a local test pass is not a hosted CI execution.
+
+## Planned module release operations
+
+Reviewed 17 November 2026 for the [module roadmap](ERP_MODULE_ROADMAP.md). Current commands and schema 7 remain unchanged. For each later module candidate record included modules, source/client/server/contracts/schema versions, new permissions/backfills, business reviewer and actual migration/acceptance evidence. Run the existing upgrade procedure with a populated-database rehearsal and the changed module scenarios; verify source/ledger/stock and employee-payable totals where applicable.
+
+Attachments, asynchronous delivery and provider connections are proposed dependencies, not configured services. Before enabling them, name storage/secret custodians, runtime identity, network routes, scheduler ownership, bounded retries, queue/delivery monitoring and backup/recovery coverage. Reassess disk growth, query plans, backup duration and lock contention for the new workload. No module-specific environment variables or launch commands are introduced by this plan.
+
+On restore keep future outbound jobs paused; replay privacy restrictions and suppressions, reconcile external delivery/payment outcomes, then authorise resumption. A healthy API or matching row counts cannot prove messages were not already sent. Payroll and Marketing delivery need separate operational acceptance. Follow [module acceptance](SMB_ERP_TESTING_DEPLOYMENT_RUNBOOK.md#12-module-expansion-acceptance) and update the user guide/handover with actual supported tasks.

@@ -10,7 +10,7 @@ npm run db:migrate
 npm start
 ```
 
-Migration 5 preserves existing users, MFA, customers and purchasing records. It adds accounting/inventory tables and two roles. It creates no company opening balances or stock. Tests migrate disposable databases, not your application database. The current application requires schema 6; see [trade workflows](TRADE_WORKFLOWS.md).
+Migration 5 preserves existing users, MFA, customers and purchasing records. It adds accounting/inventory tables and two roles. It creates no company opening balances or stock. Tests migrate disposable databases, not your application database. The current application requires schema 7; use the [operations runbook](OPERATIONS_RUNBOOK.md). Schema 6 introduced [trade workflows](TRADE_WORKFLOWS.md).
 
 Sign in as administrator and open **Accounting & stock**. Review [the posting contract](ACCOUNTING_POSTINGS.md), tick its confirmation, and **Initialise INR books**. This one-time action now creates twelve fixed posting accounts and selects INR, two decimal places and moving weighted average valuation. Purchase request estimates never become opening stock automatically.
 
@@ -45,7 +45,7 @@ Inventory managers have inventory.read and receive no chart, period, bank or jou
 | 5110 | Expense | Consumption |
 | 5120 | Expense | Purchase price variance and nonrecoverable purchase tax |
 
-An accountant can add manual accounts and rename/deactivate them with expected versions. Codes, types and system mappings remain fixed. Inactive accounts retain historical balances and cannot receive postings. Manual journals cannot use inventory, GRNI or payable control accounts.
+An accountant can add manual accounts and rename/deactivate them with expected versions. Codes, types and system mappings remain fixed. Inactive accounts retain historical balances and cannot receive postings. Manual journals cannot use inventory, GRNI, AP, AR or input/output-tax control accounts.
 
 Create inclusive, non-overlapping periods in **Chart & periods**. Posting requires an open period and a date no later than PostgreSQL's current date. Drafts may be prepared before a period exists or while it is closed. Closing requires no drafts dated in the period and an exact stock-to-ledger tie-out. Close/reopen requires a reason and an accountant; existing postings stay immutable.
 
@@ -95,3 +95,9 @@ API prefix: `/api/v1/books`. Routes cover setup; account create/update; period c
 Run `npm run check`, `npm test`, `npm run test:integration` and `npm run test:desktop`. Integration checks exact valuation, versions, permission denials, concurrent operations/retries, immutable records, induced failure rollback, period state and bank matching in disposable databases. Desktop checks cover setup, accounts/periods, journals, movements/counts, reconciliation and bank matching across roles. Tests require development PostgreSQL `CREATE DATABASE`; Electron uses a normal Windows account and keeps its renderer sandbox enabled.
 
 Orders, partial/damaged receipts, supplier invoice allocation, two-person payment approval and confirmed-transfer recording, AP/AR, configured tax and statements are implemented in [trade workflows](TRADE_WORKFLOWS.md). Returns, credit notes/refunds, statutory tax/GST, foreign currency, landed costs and valuation replay remain future work. INR does not establish a tax jurisdiction or tax treatment.
+
+## Planned Finance and Supply Chain expansion
+
+Reviewed 17 November 2026. The [module roadmap](ERP_MODULE_ROADMAP.md) extends these foundations rather than creating new books or a second stock ledger. MOD-FIN-01/02 cover reviewed corrections/opening migration, cost centres/budgets, bank-file matching and reports. MOD-SLS-02 introduces reservations and dispatch/COGS with Sales; MOD-SCM-01/02 later add replenishment, sourcing, quality/returns and independent count adjustment.
+
+Reservations must remain distinct from on-hand stock and valuation; dispatch atomically consumes eligible commitments and posts its stock/cost source. Quarantine/release and returns need explicit available-versus-valued quantity rules and reviewed original/current-cost variance. HR expense claims require an employee-payable control and Finance settlement rules; Marketing uses permitted expense/revenue attribution. Follow the [proposed posting review](ACCOUNTING_POSTINGS.md#proposed-module-posting-review) before implementation. Existing INR, weighted average, negative-stock block, control-account restrictions and current UI steps remain unchanged.

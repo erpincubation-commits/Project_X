@@ -44,3 +44,19 @@ Bank reconciliation uses entered statement lines, exact signed matches and outst
 ## Remaining expansion gates
 
 Configured exclusive-price tax, supplier reference uniqueness, receipt/invoice allocations, zero price tolerance, independent price acceptance, dual payment approvals and unique execution evidence are implemented. Jurisdiction-specific tax, credit notes/refunds, returns, landed costs, bank connectivity and retention remain separate work. Review mappings and operational rules for the intended deployment before operational use.
+
+## Proposed module posting review
+
+Reviewed 17 November 2026 for [MOD-FIN/SLS/SCM/HR](ERP_MODULE_ROADMAP.md#5-candidate-backlog-and-acceptance). This is a design agenda, not implemented source types or authority to post through manual control-account journals. Current posting rules above remain unchanged.
+
+| Planned event | Proposed effect to review | Required accounting decisions |
+| --- | --- | --- |
+| Lead/opportunity, quotation/order, reservation, replenishment suggestion, RFQ or campaign plan | No GL or physical-stock posting. | Separate pipeline/commitment/budget reporting from posted revenue and on-hand stock. |
+| Stocked sales dispatch | Dr COGS / Cr Inventory at controlled outgoing valuation. | COGS mapping, partial dispatch, reservation consumption, zero-value rounding, period/date and exactly-once source rules. |
+| Stocked customer invoice / collection | Existing AR/revenue/output-tax and Bank/AR principles with new fulfilment allocations. | Delivery/invoice linkage and remaining quantity/value limits; service AR retains its current no-stock behaviour. |
+| Customer return, credit and refund | Linked stock/cost restoration, revenue/tax/AR correction and bank settlement as applicable. | Distinguish physical return from credit/refund; select original-cost/current-cost variance policy, tax reversal, prior settlement and period treatment. |
+| Supplier return, credit and refund | Linked stock/GRNI or AP/tax/variance correction and bank settlement. | Separate uninvoiced/invoiced paths, original allocations and carrying-cost differences; bounded credits/refunds. |
+| Approved employee expense / settlement | Proposed Dr reviewed expense/recoverable tax / Cr Employee payable; settlement Dr Employee payable / Cr Bank. | New employee-payable source/control mapping, claim eligibility/tax, independent approval, confirmed external payment and correction; payroll excluded. |
+| Actual campaign expense | Ordinary approved Finance expense/AP/payment source, attributed by a reviewed dimension/link. | A campaign budget is not a journal; attribution must not duplicate expense or revenue. |
+
+Approve detailed rules and independent expected-result fixtures before schema/API work. Extend control-account protection and source-kind constraints with each posting engine; reconcile stock/COGS, AP/AR/GRNI, employee payable, tax and GL under retries/concurrency and restore. INR, weighted average, one company and negative-stock blocking remain the baseline.

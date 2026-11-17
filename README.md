@@ -2,6 +2,8 @@
 
 A Windows-first Electron desktop application, React interface, NestJS server and shared PostgreSQL database. Implemented workflows include shared customers, supplier/item masters and purchase requests with independent approval or rejection. Permissions, versions, history and retries are enforced by the server.
 
+Start with the [desktop user guide](docs/USER_GUIDE.md) for connection, MFA, roles, procure-to-pay, accounting, stock, invoicing, imports/privacy and troubleshooting. Contributors update it with each application or operating-workflow change; see the [maintenance process](docs/USER_GUIDE_MAINTENANCE.md) and run `npm run docs:check`.
+
 ## Quick start on Windows
 
 Prerequisites: Node.js 22.12+ and PostgreSQL. Native binaries are detected under `C:/Program Files/PostgreSQL`; set `PG_BIN` when installed elsewhere. See [database setup](docs/POSTGRES_SETUP.md) for Docker and existing-server alternatives.
@@ -70,10 +72,14 @@ See [development and logs](docs/DEVELOPMENT.md) for live reload, error reference
 
 ## Current scope
 
-This is a development foundation with a working customer workflow, initial administrator setup, mandatory TOTP MFA, recovery codes, session revocation, server-enforced permissions and user/audit screens. Supplier/item masters and purchase request creation, submission, independent approval/rejection, revisions and history are implemented; see [purchasing setup](docs/PROCUREMENT.md). INR accounts, accounting periods, balanced journals, warehouses, weighted average stock, stock/ledger reconciliation and bank matching are implemented; see [accounting and inventory setup](docs/ACCOUNTING_INVENTORY.md) and [posting rules](docs/ACCOUNTING_POSTINGS.md). Purchase orders, partial/damaged receipts, supplier invoice matching and exception resolution, two-person payment approvals, AP/AR, configured tax, bank outstanding items and financial statements are implemented; see [trade workflows](docs/TRADE_WORKFLOWS.md). Statutory tax filing, credit notes/refunds, configurable approval policies, personal-data management, backup automation and production operations remain future work. No claim of GDPR compliance or production readiness is made. See [architecture](docs/DESKTOP_MIGRATION.md) and [deployment](docs/DEPLOYMENT.md).
+This is a development foundation with a working customer workflow, initial administrator setup, mandatory TOTP MFA, recovery codes, session revocation, server-enforced permissions and user/audit screens. Supplier/item masters and purchase request creation, submission, independent approval/rejection, revisions and history are implemented; see [purchasing setup](docs/PROCUREMENT.md). INR accounts, accounting periods, balanced journals, warehouses, weighted average stock, stock/ledger reconciliation and bank matching are implemented; see [accounting and inventory setup](docs/ACCOUNTING_INVENTORY.md) and [posting rules](docs/ACCOUNTING_POSTINGS.md). Purchase orders, partial/damaged receipts, supplier invoice matching and exception resolution, two-person payment approvals, AP/AR, configured tax, bank outstanding items and financial statements are implemented; see [trade workflows](docs/TRADE_WORKFLOWS.md). Reviewed master imports, scoped privacy workflows and encrypted backup/restore tools are also implemented; see the operations section below. Statutory tax filing, credit notes/refunds, configurable approval policies, complete privacy/retention management, scheduled backup automation and production operations remain future work. No claim of GDPR compliance or production readiness is made. See [architecture](docs/DESKTOP_MIGRATION.md) and [deployment](docs/DEPLOYMENT.md).
 
 ## Operations and verification
 
 Schema 7 adds **Operations & privacy** in the desktop: reviewed JSON master imports and administrator privacy cases. See [imports/privacy](docs/IMPORTS_AND_PRIVACY.md), [encrypted backup/restore](docs/BACKUP_RESTORE.md), [verification commands](docs/VERIFICATION.md) and the [operations/release runbook](docs/OPERATIONS_RUNBOOK.md).
 
 After stopping the API and taking a verified backup, build, inspect `npm run db:status`, rehearse `npm run db:dry-run`, then apply `npm run db:migrate` and restart the matching server/client. No live database upgrade is performed by the tests.
+
+## Next sprint
+
+The [controlled pilot plan](docs/NEXT_SPRINT_PLAN.md) and [user story backlog](docs/NEXT_SPRINT_USER_STORIES.md) cover one developer over two weeks, with eight days of planned delivery and two days reserved for fixes and pilot acceptance.

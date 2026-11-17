@@ -9,7 +9,7 @@ npm run db:migrate
 npm start
 ```
 
-Migration **4** adds supplier/item masters, request headers/lines, immutable history, procurement retry records and new role values. It preserves existing customers, users and MFA configuration. Update client and server together; the current server requires schema version 6 (see [accounting/inventory](ACCOUNTING_INVENTORY.md)). See [orders and invoice workflows](TRADE_WORKFLOWS.md) for the implemented downstream processes. The code change alone does not migrate the main database.
+Migration **4** adds supplier/item masters, request headers/lines, immutable history, procurement retry records and new role values. It preserves existing customers, users and MFA configuration. Update client and server together; the current server requires schema version 7 (see the [operations runbook](OPERATIONS_RUNBOOK.md)). See [orders and invoice workflows](TRADE_WORKFLOWS.md) for the implemented downstream processes. The code change alone does not migrate the main database.
 
 ## Roles
 
@@ -62,7 +62,7 @@ A disabled/demoted approver cannot decide requests. Withdrawal, reassignment, de
 - Codes contain 1–32 letters/numbers/hyphens/underscores, normalised to uppercase. Names are limited to 160 characters. Supplier contacts are validated; terms are whole days from 0–365. Item units have up to 16 supported letters/numbers/punctuation. Unknown input fields are rejected.
 - A request contains 1–100 unique item lines. Quantity is a positive decimal string with at most nine whole digits and six decimal places. Estimated unit price is a nonnegative decimal string with at most ten whole digits and four decimal places. Use a decimal point and a leading zero (`0.5`).
 - Totals use PostgreSQL exact numeric arithmetic and are returned as decimal strings, without binary floating-point calculation. Currency is explicitly entered as three letters; no country pack or currency conversion is implied.
-- These are pre-tax estimates. Budget checks, tax rounding, purchase orders, stock and ledger posting require the later agreed accounting/procurement scope.
+- These are pre-tax estimates and create no stock or ledger entries. Downstream [orders, receiving, tax and invoice posting](TRADE_WORKFLOWS.md) are implemented as separate workflows; budget checks remain future work.
 
 ## History, concurrency and retries
 
@@ -96,3 +96,9 @@ Contracts and validation are in `packages/contracts/src/procurement.ts`. Record 
 ## Verification
 
 `npm run test:integration` covers validation/redaction, scopes, competing changes, duplicate retries, self-approval restrictions, both decisions, revision, exact totals, stale/inactive references and rollback on history failure. `npm run test:desktop` exercises masters and independent rejection → revision → approval across actual Electron clients. Tests use disposable databases; see [test prerequisites](AUTHENTICATION.md#verification).
+
+## Planned Supply Chain module
+
+Reviewed 17 November 2026. Procurement is the implemented buying foundation of the proposed [Supply Chain area](ERP_MODULE_ROADMAP.md). MOD-SCM-01 adds reviewed replenishment suggestions, RFQs/supplier quotations and controlled sourcing; MOD-SCM-02 adds supplier returns, quality/quarantine and independent count adjustment. Suggestions and quote comparisons do not create ledger entries or automatically place orders.
+
+Current requests still follow the existing fixed approval and one-order-per-request rules. Splitting/combining demand needs explicit allocation constraints and a migration preserving approved quantities, receipts and invoice links. Supplier returns require Finance credit/refund and valuation rules before implementation. Sales reservations/dispatch form a joint Sales/warehouse increment; manufacturing/MRP and provider logistics remain separately scoped. Update current user steps, labels, access and import templates when each increment is actually delivered.

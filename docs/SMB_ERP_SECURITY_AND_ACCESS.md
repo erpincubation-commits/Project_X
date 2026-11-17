@@ -1,8 +1,8 @@
 # SMB ERP Desktop — Security, Access and Failure Handling
 
 **Status:** Draft policy and implementation requirements for review  
-**Version:** 0.1  
-**Date:** 15 November 2026  
+**Version:** 0.2\
+**Date:** 17 November 2026\
 **Related:** [PRD](SMB_ERP_DESKTOP_PRD.md) · [Technical requirements](SMB_ERP_TECHNICAL_REQUIREMENTS.md) · [Backend schema](SMB_ERP_BACKEND_SCHEMA.md) · [Application flow](SMB_ERP_APP_FLOW.md) · [Deployment](DEPLOYMENT.md)
 
 ## 1. Purpose and scope
@@ -17,7 +17,7 @@ The detailed roles, permission rules, privacy features and response processes be
 
 The repository implements nine fixed roles, mandatory MFA, customer/purchasing/accounting/inventory authorisation, password hashing, idle and absolute session expiry, per-account sign-in throttling, input validation, sanitised logging, request IDs, React error boundaries and idempotent domain mutations. The desktop uses context isolation and a sandboxed renderer; session tokens are held in the main process. Remote connections require HTTPS and certificate validation.
 
-The audit trigger prevents ordinary modification, but a database owner can bypass it. Configurable role policies, bank connectivity, production monitoring, automated backup/restore, data-subject request tools and retention controls remain **not yet implemented**. Existing Windows installer builds are unsigned unless explicitly signed. Remote HTTPS configuration, database privileges, encryption at rest and backup operations depend on the deployment.
+The audit trigger prevents ordinary modification, but a database owner can bypass it. Schema 7 supplies encrypted backup/new-database restore tools and limited privacy-case operations; scheduling, off-host retention, production monitoring, full rights/retention coverage, configurable role policies and bank connectivity remain gaps. Existing Windows installer builds are unsigned unless explicitly signed. HTTPS, database privileges, encryption at rest and operation of backup tools depend on the deployment.
 
 Current role grants are authoritative in packages/contracts/src/index.ts and described in AUTHENTICATION.md, PROCUREMENT.md and ACCOUNTING_INVENTORY.md. The broader role matrix below remains proposed; it must not be mistaken for grants already enforced by the application.
 
@@ -62,7 +62,7 @@ Each deployment must name actual people, deputies, contact channels and escalati
 | `PRV` | Privacy officer | Manage authorised personal-data requests and retention outcomes in assigned scope; no default payment or role-management permissions. |
 | `OPS` | Infrastructure operator | Operate services, backups and monitoring using separate OS/database privileges; no automatic ERP business-user role. |
 
-Customer service, sales, HR and manufacturing roles require separate design when those modules are in scope. The current customer administrator/read-only roles must be mapped deliberately during migration rather than silently elevated.
+CRM/Sales, HR and Marketing now have proposed boundaries in section 12; manufacturing/customer-service permissions remain separately scoped. The existing nine-role, single-role-per-account registry must be mapped deliberately during any access redesign without silent elevation.
 
 ### 5.2 Permission assignments
 
@@ -206,3 +206,22 @@ None of the proposed controls should be treated as complete until implemented, c
 ## Implemented operational access
 
 Schema 7 adds imports.manage for administrator and purchasing roles (customer imports additionally require customers.create), and privacy.manage for administrators only. Identity administrators and auditors do not receive privacy exports or mutation rights. Subject-wide holds block minimisation/restriction release; restricted users/suppliers cannot be ordinarily reactivated. Historical financial/audit data remains retained. See [imports/privacy](IMPORTS_AND_PRIVACY.md) and [verification](VERIFICATION.md).
+
+## 12. Proposed module access boundaries
+
+Reviewed 17 November 2026 for the [module roadmap](ERP_MODULE_ROADMAP.md). These are permission-design requirements for MOD-PLT-01 and the domain epics, not new role codes or current grants. Current fixed-role users gain no future-module access through their job title. Define action, record, field, search, aggregate and export scope before module implementation.
+
+| Responsibility | Proposed allowed scope | Required denial / independent decision |
+| --- | --- | --- |
+| CRM owner / Sales user | Assigned leads, contacts, opportunities and authorised quotes/orders; minimum customer/credit status for the task. | Other teams' contacts and bulk export denied by default; customer merge/conversion and ownership transfer audited; no access to supplier payments or employee data. |
+| Sales manager / credit reviewer | Assigned team's pricing/discount review; Finance-approved credit authority under explicit policy. | No self-approved price/credit exception when independence required; accepted version and decision actor retained; no automatic journal or refund grant. |
+| Purchasing / warehouse | Approved sourcing, count/quality/return decisions and dispatch within explicit warehouse scope. | Separate proposer/reviewer for count or quality exceptions; no payment approval/execution through purchasing or warehouse role; no cost/financial fields unless separately granted. |
+| Finance / settlement | Approved invoices/credits/refunds, employee payable posting and confirmed settlements within reviewed scope. | Preserve independent payment controls and source reconciliation; salary/medical/profile data not required for reimbursing a claim; no direct control-account workaround. |
+| Employee / line manager | Own profile/requests/claims and explicitly assigned reports' leave/attendance decisions. | No peer profiles, compensation or unrelated receipts; prohibit own-claim/own-leave approval; delegated manager access expires and does not expose all HR records. |
+| HR administrator | Approved employee/lifecycle/leave fields and HR reports. | No identity-role assignment, claim settlement or unrestricted finance access by default; payroll grants separately designed if payroll is selected. |
+| Marketing planner / sender | Approved campaign metadata, purpose/channel eligibility and scoped audiences/results. | No unrestricted CRM export, employee audience reuse, credit balances or authentication data; independent audience/send approval as policy requires; suppression cannot be bypassed by reimport or new campaign. |
+| Integration/job identity | Narrowly scoped delivery or synchronisation actions with protected service credentials. | No interactive administrator impersonation; verify callbacks, replay protection and per-operation audit; pause on restore/credential compromise. |
+
+Separate contact preferences, suppression evidence and employee records from unrestricted history, diagnostics and dashboards. Extend discovery/holds/retention to new entities and attachments before processing real records. Customer deduplication cannot automatically merge financial identities or override a restriction. Marketing eligibility is a purpose/channel policy decision to review with the controller; merely holding an address does not authorise sending.
+
+Module acceptance must test direct API access, altered IDs, team/manager reassignment, offboarding/session revocation, denied field/search/report/export access, self-approval and combined-role conflicts where composable roles are introduced. Restore drills replay post-backup restrictions/suppressions before jobs resume. New service credentials/providers/attachments require named operational ownership and protected backup/key handling. Payroll requires a separate sensitive-data and legal/accounting review.

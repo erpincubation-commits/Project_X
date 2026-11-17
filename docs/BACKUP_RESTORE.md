@@ -50,3 +50,9 @@ Any failure returns a nonzero status. If the target was created before the failu
 5. Reopen access after approval, record cutover and archive hash, take a fresh backup and monitor. Decommission failed/old copies only under an approved retention and incident evidence decision.
 
 No automated destructive live restore or automatic rollback is provided.
+
+## Planned module recovery coverage
+
+Reviewed 17 November 2026. The [module roadmap](ERP_MODULE_ROADMAP.md) adds potential CRM/employee/campaign records, delivery checkpoints and protected attachments. Before shipping them, verify the backup table/source allowlists, schema compatibility, new control reconciliations and retention scope. Current database archive tooling does not establish backup of a future external file store, provider state or scheduler configuration; document and rehearse coordinated coverage and key custody if selected.
+
+An isolated module restore must verify party/source links, reservations versus on-hand stock, dispatch/COGS/AR corrections, employee payables and protected access/exports as applicable. Extend the independent restriction register to contacts/employees and Marketing suppressions. Keep outbound jobs paused until post-backup restrictions/suppressions are replayed and delivery outcomes are reconciled against provider evidence; a restored pending message must not be blindly resent. Retain the current new-database cutover and session-revocation procedure. No recovery command or existing archive format changes in this planning revision.

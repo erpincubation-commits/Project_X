@@ -1,17 +1,17 @@
 # SMB ERP Desktop — UI/UX Design Brief
 
 **Status:** Draft for product, design, engineering and user review  
-**Version:** 0.1  
-**Date:** 15 November 2026  
+**Version:** 0.2\
+**Date:** 17 November 2026\
 **Related documents:** [Product requirements](SMB_ERP_DESKTOP_PRD.md), [Application flow](SMB_ERP_APP_FLOW.md), [Technical requirements](SMB_ERP_TECHNICAL_REQUIREMENTS.md)
 
 ## 1. Purpose and scope
 
 Design a Windows-first ERP desktop experience for small and medium-sized businesses using a shared on-premises server. The interface should make everyday operational work clear, efficient and traceable for people in purchasing, warehouse, finance and administration.
 
-The first complete release centres on purchase-to-payment, supported by inventory, finance, user administration and essential reports. Later capabilities include sales, manufacturing and HR. This brief translates the product and flow documents into design direction; it does not represent an approved visual identity or claim that the proposed screens exist.
+The first complete release centres on purchase-to-payment, supported by inventory, Finance, user administration and essential reports. The [module roadmap](ERP_MODULE_ROADMAP.md) adds CRM/Sales, broader Supply Chain, HR and Marketing in phases. This brief translates the product and flow documents into design direction; proposed screens and visual direction require validation.
 
-**Current baseline:** The application provides a server connection and sign-in screen, a customer register, administrator customer creation, read-only access and diagnostic log access. It uses a green sidebar, white cards and a compact customer table. The remaining ERP workflows in this brief are planned.
+**Current baseline:** Application 0.2.0 / schema 7 provides connection, mandatory MFA, nine fixed roles and the workspaces **Customers**, **Purchasing**, **Accounting & stock**, **Orders & billing**, **Operations & privacy** and **Account security and access**. See the [user guide](USER_GUIDE.md#roles-and-navigation) for actual tasks/labels. The design below includes both existing workflow foundations and planned navigation/control extensions; CRM, full Sales, HR and Marketing screens do not exist.
 
 **Platform:** Electron with a React/TypeScript interface on Windows. Users need access to their organisation's server for shared transactions. Mobile access is an open product decision; this brief does not prescribe a mobile application or offline transaction support.
 
@@ -36,7 +36,7 @@ The first complete release centres on purchase-to-payment, supported by inventor
 | Administrator | Manage users and settings and support colleagues. | Explicit permissions, clear consequences and useful diagnostics. |
 | Management / auditor | Review authorised performance and evidence. | Trustworthy summaries with source-document drill-through. |
 
-Users may have multiple roles. Final permissions and approval rules require product and customer review. The interface should reflect permissions, while the server enforces them.
+Current users have one fixed role. Multiple/composable roles and new module scopes are proposed access work requiring product/customer review. The interface reflects permissions while the server enforces them.
 
 ## 4. Experience principles
 
@@ -63,7 +63,7 @@ Workspace
 └── Administration       Users, roles, approvals, settings, audit
 ```
 
-The current interface only exposes Customers. A richer navigation shell and work queue are planned design work. Detailed page names, grouping and roles should be validated with users as the scope is implemented.
+This tree is a target grouping, not current sidebar labels. The current workspaces are listed above; a work queue and new module navigation remain planned. Preserve users' routes to existing tasks when introducing modules, and validate names/grouping with users.
 
 ## 6. Desktop layout direction
 
@@ -90,7 +90,7 @@ This is a structural sketch, not a pixel-perfect specification. Avoid requiring 
 
 | Screen | Core content and actions | Critical states |
 | --- | --- | --- |
-| Connection and sign-in | Server address, connection status, account fields, sign-in and support access. Explain that IT supplies the server address. | Unreachable server, invalid certificate, incorrect credentials, session expired. MFA and account recovery are planned. |
+| Connection and sign-in | Server address, connection status, account fields, mandatory MFA/enrolment and support access. Explain that IT supplies the server address. | Unreachable server, invalid certificate, incorrect credentials, session expired. Full password/MFA recovery remains planned. |
 | Home / work queue | Assigned approvals, exceptions and recent permitted work; clear links to the next action. | Empty queue, loading, stale data, permission changes. |
 | Register / list | Title, search/filter controls when available, meaningful columns, status, pagination and role-appropriate create action. | No records, no results, loading, error, filtered results. |
 | Purchase request | Requester, items, quantities, estimated values, justification, budget context and submit action. | Draft, validation errors, pending, approved, rejected; final state model to be agreed. |
@@ -207,3 +207,20 @@ Test representative users carrying out realistic tasks without coaching. Record 
 - Decide whether mobile approvals and warehouse access are needed, and in which phase.
 - Define permission-denied, delegated approval, data retention and financial correction behaviours with product, customer IT and privacy stakeholders.
 - Confirm the detail and scope of the work queue, RFQ step, payment method and external integrations before finalising those screens.
+
+## 14. Planned module experience
+
+Reviewed 17 November 2026. Use [ERPNext workflows](ERPNEXT_MODULE_CROSSWALK.md) as research references while retaining the desktop interaction model. These are design briefs for roadmap epics, not new user instructions or implemented sidebar entries.
+
+| Area / epic | First design deliverables | Critical states and permission boundaries |
+| --- | --- | --- |
+| CRM / MOD-CRM-01 | Lead/contact register, accessible pipeline list plus optional board, opportunity detail, assigned follow-ups and customer conversion review. | Unqualified/qualified/converted/disqualified; won/lost reasons; possible duplicates; existing-customer choice; scoped contact/history visibility. Provide keyboard alternatives to dragging cards. |
+| Sales / MOD-SLS-01/02 | Quote/order detail with accepted price/tax snapshot, credit/discount decision, separate fulfilment/billing progress, reservation/pick/partial dispatch and linked return/credit views. | Draft/review/accepted/held/closed; reserved is distinct from on-hand or dispatched; partially billed/returned; explain stock/COGS/AR consequences before posting. |
+| Finance / MOD-FIN-01/02 | Source-linked correction/refund review, opening migration reconciliation, budget/cost-centre reports and bank import review. | Original versus remaining credited/paid value; closed period; duplicate file/line; independent decision; preserve current financial control-account restrictions. |
+| Supply Chain / MOD-SCM-01/02 | Explainable replenishment suggestion, RFQ/quote comparison, sourcing allocations, quality hold/release, count approval and supplier return. | Proposed versus committed demand; quarantine versus available stock; stale count; invoiced versus uninvoiced return; location scope and authority. |
+| HR / MOD-HR-01/02 | Restricted employee profile, own/manager leave/attendance views, balance explanation, claim lines/receipt review and Finance settlement handoff. | Pending/approved/rejected/cancelled leave; concurrent balance conflict; offboarding; no self-approved claims; hide restricted fields and receipts from global search/previews. |
+| Marketing / MOD-MKT-01/02 | Campaign plan, eligibility explanation, audience snapshot review and source/funnel/cost results. Optional send preview only after delivery is selected. | Draft/reviewed/active/completed; suppressed/withdrawn recipient; stale eligibility; no channel configured; uncertain/failed delivery; distinguish pipeline, net revenue and collected cash. |
+
+Proposed navigation groups CRM, Sales, Finance, Supply Chain, HR, Marketing and Administration by permission. Show only implemented, enabled tasks for the installed release; no decorative placeholder module should imply availability. Existing customer/service-invoice routes need a documented transition when regrouped.
+
+Module design acceptance includes a complete keyboard/screen-reader journey, permission-safe source navigation, concurrent-change and uncertain-save recovery, window/scaling checks and synthetic-data usability review. Do not reveal employee salaries, contact preferences or customer credit details in shared notifications, counts or hover previews without the corresponding grant. Update the user guide with actual screen names only when those screens ship.
