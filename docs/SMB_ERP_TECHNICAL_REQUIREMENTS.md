@@ -30,7 +30,7 @@ Supported OS/database versions, hardware, first tax jurisdiction, deployment top
 
 ## 2. Current implementation baseline
 
-Reviewed source baseline: application 0.2.0 / schema 7. The [user guide](USER_GUIDE.md) describes implemented workflows; the [module roadmap](ERP_MODULE_ROADMAP.md) defines proposed expansion. This review does not verify an installed database.
+Reviewed source baseline: application 0.2.0 / schema 8. The [user guide](USER_GUIDE.md) describes implemented workflows; the [module roadmap](ERP_MODULE_ROADMAP.md) defines proposed expansion. This review does not verify an installed database.
 
 | Area | Existing baseline | Still required for production ERP |
 | --- | --- | --- |

@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
-import { loginInput, setupInput, mfaInput } from '@erp/contracts';
+import { loginInput, setupInput, mfaInput, changePasswordInput } from '@erp/contracts';
 import { parse } from '../common/validation';
 import { AuthService } from './auth.service';
 import { AuthGuard, AuthRequest } from './auth.guard';
@@ -14,6 +14,9 @@ export class AuthController {
     const input = parse(loginInput, body);
     return this.auth.login(input.email, input.password);
   }
+  @UseGuards(AuthGuard)
+  @HttpCode(204)
+  @Post('change-password') async changePassword(@Req() request: AuthRequest, @Body() body: unknown) { const input = parse(changePasswordInput, body); await this.auth.changePassword(request.user, request.token, input.currentPassword, input.newPassword); }
   @UseGuards(AuthGuard)
   @Get('me') me(@Req() request: AuthRequest) { return request.user; }
   @UseGuards(AuthGuard)

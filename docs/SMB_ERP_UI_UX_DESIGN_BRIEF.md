@@ -11,7 +11,7 @@ Design a Windows-first ERP desktop experience for small and medium-sized busines
 
 The first complete release centres on purchase-to-payment, supported by inventory, Finance, user administration and essential reports. The [module roadmap](ERP_MODULE_ROADMAP.md) adds CRM/Sales, broader Supply Chain, HR and Marketing in phases. This brief translates the product and flow documents into design direction; proposed screens and visual direction require validation.
 
-**Current baseline:** Application 0.2.0 / schema 7 provides connection, mandatory MFA, nine fixed roles and the workspaces **Customers**, **Purchasing**, **Accounting & stock**, **Orders & billing**, **Operations & privacy** and **Account security and access**. See the [user guide](USER_GUIDE.md#roles-and-navigation) for actual tasks/labels. The design below includes both existing workflow foundations and planned navigation/control extensions; CRM, full Sales, HR and Marketing screens do not exist.
+**Current baseline:** Application 0.2.0 / schema 8 provides connection, mandatory MFA, nine fixed roles and the workspaces **Customers**, **Purchasing**, **Accounting & stock**, **Orders & billing**, **Operations & privacy** and **Account security and access**. See the [user guide](USER_GUIDE.md#roles-and-navigation) for actual tasks/labels. The design below includes both existing workflow foundations and planned navigation/control extensions; CRM, full Sales, HR and Marketing screens do not exist.
 
 **Platform:** Electron with a React/TypeScript interface on Windows. Users need access to their organisation's server for shared transactions. Mobile access is an open product decision; this brief does not prescribe a mobile application or offline transaction support.
 

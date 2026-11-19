@@ -28,7 +28,7 @@ export class AuthService {
       window_started=CASE WHEN erp_login_attempts.window_started < now()-interval '15 minutes' THEN now() ELSE erp_login_attempts.window_started END RETURNING attempts`, [key]);
     if (result.rows[0].attempts > 10) {
       await this.audit(this.database.pool, null, 'auth.throttled', 'authentication');
-      throw new HttpException('Too many sign-in attempts. Wait 15 minutes before trying again.', 429);
+      throw new HttpException(key.startsWith('password-change:') ? 'Too many password change attempts. Wait 15 minutes before trying again.' : 'Too many sign-in attempts. Wait 15 minutes before trying again.', 429);
     }
   }
   private async challenge(client: PoolClient, account: Account): Promise<AuthChallenge> {
@@ -137,6 +137,26 @@ export class AuthService {
   }
   async logout(token: string, user: User) {
     await this.database.transaction(async client => { await client.query('DELETE FROM erp_sessions WHERE token_hash=$1', [digest(token)]); await this.audit(client, user.id, 'logout', user.id); });
+  }
+  async changePassword(user: User, token: string, currentPassword: string, newPassword: string) {
+    await this.throttle('password-change:' + user.id);
+    const outcome = await this.database.transaction(async client => {
+      const account = (await client.query<Account>('SELECT * FROM erp_users WHERE id=$1 FOR UPDATE', [user.id])).rows[0];
+      const session = account && (await client.query(`SELECT 1 FROM erp_sessions WHERE token_hash=$1 AND user_id=$2 AND auth_version=$3 AND expires_at>now() AND last_seen_at>now()-interval '30 minutes'`, [digest(token), user.id, account.auth_version])).rowCount;
+      if (!account?.active || !account.mfa_secret || !session) return 'expired';
+      if (Buffer.byteLength(currentPassword) > 72 || !(await compare(currentPassword, account.password_hash))) {
+        await this.audit(client, user.id, 'auth.password_change_failed', user.id);
+        return 'incorrect';
+      }
+      const passwordHash = await hash(newPassword, 12);
+      await client.query('UPDATE erp_users SET password_hash=$2, auth_version=auth_version+1 WHERE id=$1', [user.id, passwordHash]);
+      await client.query('DELETE FROM erp_sessions WHERE user_id=$1', [user.id]);
+      await client.query('DELETE FROM erp_auth_challenges WHERE user_id=$1', [user.id]);
+      await this.audit(client, user.id, 'auth.password_changed', user.id);
+      return 'changed';
+    });
+    if (outcome === 'expired') throw new UnauthorizedException('Your session has expired. Sign in again.');
+    if (outcome === 'incorrect') throw new ForbiddenException('Current password is incorrect.');
   }
   async revokeSessions(user: User) {
     await this.database.transaction(async client => {

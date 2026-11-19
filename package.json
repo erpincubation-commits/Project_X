@@ -28,6 +28,7 @@
     "check": "npm run build -w @erp/logging && npm run build -w @erp/contracts && npm run check --workspaces --if-present",
     "test": "npm run build:server && npm run test -w @erp/logging && node --test apps/server/test/*.test.cjs",
     "test:integration": "npm run build:server && node tools/isolated-tests.mjs api",
+    "test:desktop-unit": "npm run build:desktop && node --test apps/desktop/test/*.test.cjs",
     "test:desktop": "npm run build && node tools/isolated-tests.mjs desktop",
     "db:setup": "npm run build:server && node apps/server/dist/database/cli.js setup",
     "db:start": "node apps/server/dist/database/cli.js start",

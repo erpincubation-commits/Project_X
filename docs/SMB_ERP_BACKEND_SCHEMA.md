@@ -29,7 +29,7 @@ The authoritative definition is [migrate.ts](../apps/server/src/database/migrate
 | `erp_audit_events` | `id BIGSERIAL` PK; `actor_id UUID NOT NULL` FK to users; `action TEXT`, `entity_type TEXT`, `entity_id TEXT`, `occurred_at TIMESTAMPTZ`, `changes JSONB`, all required. | Current business/security audit records. |
 | `erp_idempotency` | `actor_id UUID` FK to users and `request_id UUID`, composite PK; `payload JSONB NOT NULL`, `response JSONB NOT NULL`. | Customer-create retry records. |
 
-Customer creation, its audit entry and retry response are committed in one database transaction. The audit trigger rejects ordinary updates, deletes and truncation; a database owner can bypass it, so it is not tamper-proof. The table above is the historical migration 1–2 shape: migrations 3–7 implement MFA, nine fixed roles, suppliers, procurement, stock, accounting and operational records. In particular, the listed two-role user constraint is superseded. The logical target below is not a replacement physical schema. Current source requires schema 7; check the installed database separately.
+Customer creation, its audit entry and retry response are committed in one database transaction. The audit trigger rejects ordinary updates, deletes and truncation; a database owner can bypass it, so it is not tamper-proof. The table above is the historical migration 1–2 shape: migrations 3–7 implement MFA, nine fixed roles, suppliers, procurement, stock, accounting and operational records. In particular, the listed two-role user constraint is superseded. The logical target below is not a replacement physical schema. Current source requires schema 8; check the installed database separately.
 
 ## 3. Modelling conventions for the proposed schema
 

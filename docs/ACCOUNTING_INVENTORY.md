@@ -10,7 +10,7 @@ npm run db:migrate
 npm start
 ```
 
-Migration 5 preserves existing users, MFA, customers and purchasing records. It adds accounting/inventory tables and two roles. It creates no company opening balances or stock. Tests migrate disposable databases, not your application database. The current application requires schema 7; use the [operations runbook](OPERATIONS_RUNBOOK.md). Schema 6 introduced [trade workflows](TRADE_WORKFLOWS.md).
+Migration 5 preserves existing users, MFA, customers and purchasing records. It adds accounting/inventory tables and two roles. It creates no company opening balances or stock. Tests migrate disposable databases, not your application database. The current application requires schema 8; use the [operations runbook](OPERATIONS_RUNBOOK.md). Schema 6 introduced [trade workflows](TRADE_WORKFLOWS.md).
 
 Sign in as administrator and open **Accounting & stock**. Review [the posting contract](ACCOUNTING_POSTINGS.md), tick its confirmation, and **Initialise INR books**. This one-time action now creates twelve fixed posting accounts and selects INR, two decimal places and moving weighted average valuation. Purchase request estimates never become opening stock automatically.
 

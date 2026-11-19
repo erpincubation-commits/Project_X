@@ -1,6 +1,6 @@
 # Operations and release runbook
 
-Applies to the Windows Electron client, NestJS server and PostgreSQL schema 7. Execute server commands from the repository root. Keep the database private; only the HTTPS API is exposed to clients. Desktop installations never contain server secrets.
+Applies to the Windows Electron client, NestJS server and PostgreSQL schema 8. Execute server commands from the repository root. Keep the database private; only the HTTPS API is exposed to clients. Desktop installations never contain server secrets.
 
 ## Commands and evidence
 

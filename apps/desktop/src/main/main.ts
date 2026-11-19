@@ -7,7 +7,7 @@ import { registerProcurementIPC } from './procurement-ipc';
 import { registerBooksIPC } from './books-ipc';
 import { registerOperationsIPC } from './operations-ipc';
 import { registerTradeIPC } from './trade-ipc';
-import { createUserInput, updateUserInput, loginInput, setupInput, type CustomerInput } from '@erp/contracts';
+import { createUserInput, updateUserInput, loginInput, setupInput, changePasswordInput, type CustomerInput } from '@erp/contracts';
 import { createLogger, diagnosticError } from '@erp/logging';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'erp', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
@@ -82,6 +82,12 @@ async function main() {
     return api.verifyMfa({ code: input.code.trim() });
   });
   handle('auth:me', () => api.me());
+  handle('auth:change-password', (input: unknown) => { const parsed = changePasswordInput.safeParse(input); return parsed.success ? api.changePassword(parsed.data) : { ok: false, error: 'Enter your current password and a new password of at least 12 characters and at most 72 UTF-8 bytes.' }; });
+  handle('recovery:list', () => api.recoveryCases());
+  handle('recovery:request', (input: unknown) => api.requestRecovery(input as {email:string;verified:true}));
+  handle('recovery:approve', (id: unknown) => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id) ? api.approveRecovery(id) : {ok:false,error:'Invalid recovery request.'});
+  handle('recovery:cancel', (id: unknown) => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id) ? api.cancelRecovery(id) : {ok:false,error:'Invalid recovery request.'});
+  handle('recovery:redeem', (input: unknown) => api.redeemRecovery(input as {token:string;newPassword:string}));
   handle('auth:revoke-sessions', () => api.revokeSessions());
   handle('access:users', () => api.listUsers());
   handle('access:create-user', (input: unknown) => { const parsed = createUserInput.safeParse(input); return parsed.success ? api.createUser(parsed.data) : { ok: false, error: 'Enter a valid email, role and a password of at least 12 characters (at most 72 UTF-8 bytes).' }; });

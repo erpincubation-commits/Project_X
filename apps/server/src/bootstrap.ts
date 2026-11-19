@@ -22,7 +22,7 @@ export async function createApplication() {
   app.enableShutdownHooks();
   try {
     const result = await app.get(DatabaseService).pool.query('SELECT max(version) AS version FROM erp_schema_migrations');
-    if (result.rows[0].version !== 7) throw new Error('Schema mismatch');
+    if (result.rows[0].version !== 8) throw new Error('Schema mismatch');
   } catch (error) {
     serverLog.error('database.startup_failed', diagnosticError(error));
     await app.close();

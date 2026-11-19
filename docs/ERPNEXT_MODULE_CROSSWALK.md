@@ -1,7 +1,7 @@
 # ERPNext inspiration and current module crosswalk
 
 **References checked:** 17 November 2026  
-**Our baseline:** 0.2.0 / schema 7 in source  
+**Our baseline:** 0.2.0 / schema 8 in source<br>
 **Status:** Workflow research and proposed scope; no compatibility or feature-parity claim
 
 ERPNext informs the integrated-document approach to the [module roadmap](ERP_MODULE_ROADMAP.md). The proposed phases, priorities and acceptance rules are our design decisions. The product retains its Electron/NestJS/PostgreSQL architecture; this crosswalk is not an installation or migration guide for ERPNext.

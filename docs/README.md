@@ -1,8 +1,8 @@
 # Documentation index
 
-**Reviewed:** 17 November 2026. Current source baseline: application 0.2.0 / schema 7. Source functionality, proposed requirements and actual deployment evidence are separate.
+**Reviewed:** 17 November 2026. Current source baseline: application 0.2.0 / schema 8. Source functionality, proposed requirements and actual deployment evidence are separate.
 
-Start with the [desktop user guide](USER_GUIDE.md) for implemented tasks. For the proposed six-module expansion use the [ERP module roadmap](ERP_MODULE_ROADMAP.md) and [ERPNext reference crosswalk](ERPNEXT_MODULE_CROSSWALK.md). The [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) refine phase 1. The [next sprint](NEXT_SPRINT_PLAN.md) and [sprint stories](NEXT_SPRINT_USER_STORIES.md) retain the existing controlled-pilot scope and capacity.
+Start with the [desktop user guide](USER_GUIDE.md) for implemented tasks. For the proposed six-module expansion use the [ERP module roadmap](ERP_MODULE_ROADMAP.md) and [ERPNext reference crosswalk](ERPNEXT_MODULE_CROSSWALK.md). The [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) refine phase 1. The [CF-01 decision record](CF01_FINANCE_DECISION_RECORD.md) is a draft awaiting scope and accountant review. The [next sprint](NEXT_SPRINT_PLAN.md) and [sprint stories](NEXT_SPRINT_USER_STORIES.md) retain the existing controlled-pilot scope and capacity.
 
 | Purpose | Documents | Expansion-plan review |
 | --- | --- | --- |

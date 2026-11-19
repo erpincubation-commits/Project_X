@@ -1,7 +1,8 @@
 # SMB ERP desktop user guide
 
-**Last reviewed:** 17 November 2026  
-**Application baseline:** package version 0.2.0, implemented workflows through database schema 7  
+**Last reviewed:** 19 November 2026
+
+**Application baseline:** package version 0.2.0, implemented workflows through database schema 8<br>
 **Audience:** Windows desktop users, administrators, purchasing, inventory and finance teams
 
 This guide describes the current Electron application connected to a shared on-premises server. Your administrator must confirm the installed client, server and database match this baseline. The version in the source tree does not establish which version is running at your company. Use synthetic data during the [controlled pilot](NEXT_SPRINT_PLAN.md); production acceptance is a separate decision.
@@ -64,7 +65,15 @@ Enter your email/password, then a current authenticator code. Alternatively, ent
 
 If a code fails, check the correct account and latest setup key, enable automatic time on the authenticator device, and ask IT to check the server clock. A challenge expires after five minutes and permits five attempts. Repeated attempts are also limited across challenges; stop retrying and wait for the 15-minute limit window when throttled. Use an unused recovery code if appropriate.
 
-If you lose both the authenticator and recovery codes, contact your administrator. A complete operator-assisted MFA/password recovery workflow is still a product gap; there is no self-service reset screen. Do not create a replacement user or rerun initial setup to bypass a lockout.
+If you lose both the authenticator and recovery codes, contact your administrator through your established company channel. Two different signed-in administrators must independently verify your identity and approve recovery. The administrator privately supplies a token that expires after 15 minutes. Select **Recover access** on the sign-in screen, enter the token and a new password, then sign in and enrol a new authenticator. Save the new recovery codes privately. Recovery ends your other sessions and pending sign-in challenges and invalidates your previous authenticator and recovery codes. Disabled or privacy-restricted accounts cannot use this process.
+
+If the token is lost or may be exposed, contact an administrator immediately to cancel the request; do not share it in tickets or logs. If the completion response is lost, try signing in with the new password. If it fails, contact the administrator rather than repeatedly retrying. There is no self-service reset without an operator-issued token. Last-administrator emergency recovery needs a separate approved procedure and is not provided by this workflow.
+
+### Change your password
+
+While signed in, open **Account security and access**, enter your **Current password**, **New password** and **Confirm new password**, then select **Change password**. Use at least 12 characters and at most 72 UTF-8 bytes. All sessions, including this one, and pending sign-in challenges end on success. Sign in again with the new password and your authenticator or unused recovery code. Save other unsaved work first.
+
+If the response is lost, the change may have succeeded. Sign in with the new password; if it does not work, try the previous password. Do not repeatedly retry: password-change attempts are limited to ten in 15 minutes. If neither works, contact an administrator; self-service password reset is not available. MFA is required at sign-in; there is no additional password-change MFA prompt.
 
 ### Sign out and session expiry
 
@@ -83,7 +92,7 @@ Use the left sidebar to select a workspace. Tabs and actions depend on your role
 | **Accounting & stock** | Chart & periods, Journals, Warehouses & stock, Reconciliation, Bank statements. |
 | **Orders & billing** | Orders, Receipts, Supplier invoices, Payments, Customer invoices, Collections, Taxes, Statements. |
 | **Operations & privacy** | Master imports and administrator Privacy requests. |
-| **Account security and access** | Own-session revocation, authorised user management and audit viewing. |
+| **Account security and access** | Password change, own-session revocation, authorised identity recovery, user management and audit viewing. |
 
 | Assigned role | Principal responsibilities and limits |
 | --- | --- |
@@ -107,8 +116,9 @@ Use **Tab** and **Shift+Tab** to move between controls, **Enter** to submit an a
 2. Open **Account security and access**. Enter **New user email**, **Initial password**, choose **Role**, then select **Create account**. Share credentials through the approved private channel. Every account completes MFA on first sign-in.
 3. Provision separate purchasing, inventory and finance accounts and independent business approvers. Payments require two distinct approvers, separate from their preparer. Use individual accounts for attributable history.
 4. Review roles and **Enable/Disable** controls. Access changes end the affected user's sessions. You cannot change your own access or demote/disable the last active administrator. A privacy-restricted account needs the authorised privacy process before ordinary reactivation.
-5. Open **Accounting & stock → Chart & periods**. Review [posting rules](ACCOUNTING_POSTINGS.md), check **I have reviewed the INR posting rules and initial account mappings**, then select **Initialise INR books** once.
-6. Have the accountant create an open accounting period and review tax configuration. Have the inventory manager create active warehouses and purchasing create active items/suppliers.
+5. For identity recovery, open **Account security and access**. Independently verify the person using your organisation's approved procedure, enter **Account email for recovery**, confirm verification and select **Request recovery**. A different signed-in administrator selects **Refresh recovery requests**, independently verifies the person, then selects **Verify and approve**. Privately deliver the token shown once; it expires after 15 minutes. Either administrator can select **Cancel recovery** if the token is compromised or its issuance response is uncertain. Requests pending without approval expire after 24 hours. Account and operator access changes can invalidate a request; start again after review. See the [suggested operator procedure](AUTHENTICATION.md#operator-assisted-identity-recovery), which requires local adoption.
+6. Open **Accounting & stock → Chart & periods**. Review [posting rules](ACCOUNTING_POSTINGS.md), check **I have reviewed the INR posting rules and initial account mappings**, then select **Initialise INR books** once.
+7. Have the accountant create an open accounting period and review tax configuration. Have the inventory manager create active warehouses and purchasing create active items/suppliers.
 
 Books setup creates twelve system posting accounts and fixes INR, two-place money, moving weighted average and negative-stock blocking. It creates no opening balances or inventory. Existing books must not be initialised again. Opening entries require a reviewed finance plan.
 
@@ -399,11 +409,11 @@ At the start of work, confirm the intended company server/account, refresh the r
 
 The operator separately reviews backup results and recovery rehearsal evidence. Backup tooling exists; scheduling, off-host copies, monitoring and restore authority require deployment setup. No backup/restore button or automatic update service is supplied by the desktop.
 
-Current boundaries include fixed roles/policies, one company per deployment, INR books, no foreign-currency conversion, no statutory tax filing, no supplier/customer credit notes or refunds, no stock returns/quarantine, no sales inventory dispatch/COGS, no bank connection and no complete password/MFA reset workflow. Financial opening migration and legacy Python data conversion are not covered by master imports. Pilot accessibility, performance, signed-release and deployment evidence remain acceptance work; see the [next sprint](NEXT_SPRINT_PLAN.md).
+Current boundaries include fixed roles/policies, one company per deployment, INR books, no foreign-currency conversion, no statutory tax filing, no supplier/customer credit notes or refunds, no stock returns/quarantine, no sales inventory dispatch/COGS, no bank connection and no implemented last-administrator emergency recovery. Financial opening migration and legacy Python data conversion are not covered by master imports. Pilot accessibility, performance, signed-release and deployment evidence remain acceptance work; see the [next sprint](NEXT_SPRINT_PLAN.md).
 
 ## Planned modules and availability
 
-The [ERP module roadmap](ERP_MODULE_ROADMAP.md) proposes Finance completion, CRM/Sales, broader Supply Chain, HR and Marketing using [ERPNext/Frappe workflow references](ERPNEXT_MODULE_CROSSWALK.md). The proposed [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) provide more detail for the first expansion phase. These are development plans, not additional installed workspaces. Current source remains version 0.2.0 / schema 7; the operator must confirm your deployed versions separately.
+The [ERP module roadmap](ERP_MODULE_ROADMAP.md) proposes Finance completion, CRM/Sales, broader Supply Chain, HR and Marketing using [ERPNext/Frappe workflow references](ERPNEXT_MODULE_CROSSWALK.md). The proposed [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) provide more detail for the first expansion phase. The [draft Finance decision record](CF01_FINANCE_DECISION_RECORD.md) collects unresolved scope and policy decisions and synthetic examples for review; it is not approved or authority to post. These are development plans, not additional installed workspaces. Current source is version 0.2.0 / schema 8; the operator must confirm your deployed versions separately.
 
 | Area | What you can use now | Planned addition |
 | --- | --- | --- |
@@ -423,10 +433,14 @@ The root [contributor instructions](../AGENTS.md) and [documentation maintenance
 
 | Date | Baseline / change | Guide update |
 | --- | --- | --- |
+| 2026-11-19 | 0.2.0 / schema 8; CF-03 identity recovery | Added two-administrator recovery, token handling, MFA re-enrolment, cancellation and escalation guidance. Upgrade client and server and migrate after backup; operator verification and emergency procedures still require local adoption and rehearsal. |
+| 2026-11-19 | 0.2.0 / schema 7; CF-03 draft threat review | Reviewed sign-in, recovery codes, privacy restriction and last-administrator guidance against the proposed recovery design. Operator-assisted recovery remains unavailable; no policy approval, operator rehearsal, schema migration or deployment is implied. |
+| 2026-11-17 | 0.2.0 / schema 7; FUP-01 password change | Reviewed sign-in, session revocation, password limits and uncertain responses against the new desktop and API flow. Upgrade client and server together; no schema migration or deployment acceptance is implied. |
+| 2026-11-17 | 0.2.0 / schema 7; CF-01 draft decision record | Reviewed current Finance posting, opening, report and privacy limits against the draft scope and synthetic examples. No user workflow, role, configuration, version or schema changed; operators should continue current procedures and obtain Finance review before any release decision. |
 | 2026-11-17 | 0.2.0 / schema 7; Core and Finance story refinement | Reviewed sign-in/access, purchasing and Finance corrections, openings, reports, privacy and recovery limits against the proposed CF-01–21 backlog. Added a planning reference; no current task, role, operator procedure, application version or schema changed. No operator action or deployment acceptance is implied. |
 | 2026-11-17 | 0.2.0 / schema 7; module expansion plan | Reviewed current navigation, roles, service AR, stock/purchasing, imports/privacy and deployment limits against the proposed six-module scope. Added an availability table and roadmap/reference links; current task instructions and application/schema baseline remain unchanged. Operator implication: no module enablement, migration or installation required by this documentation change. No new UI/test/deployment acceptance is established. |
 | 2026-11-16 | 0.2.0 / schema 7 | Initial consolidated guide: connection, MFA/access, masters, procure to pay, books/stock, AP/AR, tax/reconciliation, imports/privacy, history, recovery boundaries and support. Added same-change maintenance instructions and documentation check. Reconciled current-schema and implemented-scope statements in the linked workflow documents and README. Reviewed against source; hosted CI and deployed environment acceptance are not established by this documentation change. |
 | 2026-11-16 | Procure-to-pay setup troubleshooting | Added an active-role preflight and missing-account troubleshooting. Local checks passed: API readiness, PostgreSQL connectivity, migration checksums through schema 7, TypeScript, eight unit tests and seven isolated API integration tests. These checks do not establish desktop UI or pilot acceptance. |
 | 2026-11-16 | Receiving prerequisite ownership | Clarified administrator, accountant, purchasing and inventory-manager responsibilities before receiving. Confirmed against the role registry and server permission guards; business permissions are unchanged. |
 
-For specialist references, use [authentication](AUTHENTICATION.md), [procurement](PROCUREMENT.md), [books/stock](ACCOUNTING_INVENTORY.md), [trade](TRADE_WORKFLOWS.md), [imports/privacy](IMPORTS_AND_PRIVACY.md), [operations](OPERATIONS_RUNBOOK.md) and [Windows installers](WINDOWS_INSTALLER.md). Older schema-specific activation sections describe the release that introduced a feature; the current source requires schema 7. Confirm actual deployed schema with the operator.
+For specialist references, use [authentication](AUTHENTICATION.md), [procurement](PROCUREMENT.md), [books/stock](ACCOUNTING_INVENTORY.md), [trade](TRADE_WORKFLOWS.md), [imports/privacy](IMPORTS_AND_PRIVACY.md), [operations](OPERATIONS_RUNBOOK.md) and [Windows installers](WINDOWS_INSTALLER.md). Older schema-specific activation sections describe the release that introduced a feature; the current source requires schema 8. Confirm actual deployed schema with the operator.

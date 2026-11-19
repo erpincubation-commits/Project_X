@@ -80,6 +80,19 @@ export class ApiClient implements BooksAPI {
     return { ok: true, data: { user: result.data.user, recoveryCodes: result.data.recoveryCodes } };
   }
   me() { return this.request<User>('/auth/me'); }
+  recoveryCases() { return this.request<C.RecoveryCase[]>('/identity-recovery/cases'); }
+  requestRecovery(input: {email:string;verified:true}) { return this.request<{id:string}>('/identity-recovery/cases','POST',input); }
+  approveRecovery(id:string) { return this.request<{token:string;expiresInSeconds:number}>(`/identity-recovery/cases/${id}/approve`,'POST',{verified:true}); }
+  cancelRecovery(id:string) { return this.request<null>(`/identity-recovery/cases/${id}/cancel`,'POST'); }
+  redeemRecovery(input:{token:string;newPassword:string}) { return this.request<null>('/identity-recovery/redeem','POST',input); }
+  async changePassword(input: { currentPassword: string; newPassword: string }): Promise<Result<null>> {
+    const result = await this.request<null>('/auth/change-password', 'POST', input);
+    if (result.ok || !result.status || result.status >= 500) {
+      this.token = undefined; this.challenge = undefined;
+      if (!result.ok) return { ok: false, status: 401, error: 'The result is unknown. Sign in with the new password; if it does not work, try the previous password. MFA is required.' };
+    }
+    return result;
+  }
   async revokeSessions() { const result = await this.request<null>('/auth/revoke-sessions', 'POST'); if (result.ok) this.token = undefined; return result; }
   listUsers() { return this.request<ManagedUser[]>('/access/users'); }
   createUser(input: { email: string; password: string; role: Role }) { return this.request<ManagedUser>('/access/users', 'POST', input); }
