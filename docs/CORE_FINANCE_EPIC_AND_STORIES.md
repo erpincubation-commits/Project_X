@@ -2,7 +2,7 @@
 
 **Prepared:** 17 November 2026  
 **Status:** Proposed backlog; not implemented, estimated, scheduled or accepted  
-**Source baseline:** Application 0.2.0 / database schema 7; installed versions are unverified  
+**Source baseline:** Application 0.2.0 / database schema 8; installed versions are unverified<br>
 **Parent plan:** [ERP module roadmap, phase 1](ERP_MODULE_ROADMAP.md#4-delivery-sequence-and-gates)  
 **Existing pilot:** [PIL-01–08](NEXT_SPRINT_USER_STORIES.md) remain phase 0 and retain their ten-day capacity
 

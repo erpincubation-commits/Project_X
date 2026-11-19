@@ -1,3 +1,4 @@
+import { recoveryMigration } from './recovery-migration';
 import { createHash } from 'node:crypto';
 import { operationsMigration } from './operations-migration';
 import type { Pool } from 'pg';
@@ -116,7 +117,7 @@ export const migrations = [
       actor_id UUID NOT NULL REFERENCES erp_users(id), request_id UUID NOT NULL, operation TEXT NOT NULL,
       payload JSONB NOT NULL, response JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY(actor_id,request_id)
     );
-  ` }, booksMigration, tradeMigration, operationsMigration
+  ` }, booksMigration, tradeMigration, operationsMigration, recoveryMigration
 ];
 
 export const migrationChecksum=(sql:string)=>createHash('sha256').update(sql.replaceAll('\r\n','\n')).digest('hex');

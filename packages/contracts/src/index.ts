@@ -36,6 +36,7 @@ export const rolePermissions: Record<Role, readonly Permission[]> = {
   accountant:['masters.read','books.read','books.manage','journals.post','inventory.read','orders.read','payables.read','payables.manage','payments.read','payments.manage','receivables.manage','tax.manage'],
   inventory_manager:['masters.read','inventory.read','inventory.manage','orders.read','receipts.manage']
 };
+export interface RecoveryCase { id: string; email: string; status: 'PENDING' | 'ISSUED'; requestedBy: string; approvedBy: string | null; createdAt: string; expiresAt: string | null }
 export interface SetupStatus { setupRequired: boolean }
 export interface AuthChallenge { challenge: string; mfaRequired: true; enrollment?: { secret: string; uri: string } }
 export type MfaPrompt = Omit<AuthChallenge, 'challenge'>;
@@ -58,6 +59,11 @@ export interface DesktopAPI extends BooksAPI, TradeAPI, OperationsAPI {
   login(input: z.infer<typeof loginInput>): Promise<Result<MfaPrompt>>;
   verifyMfa(input: { code: string }): Promise<Result<SignedIn>>;
   me(): Promise<Result<User>>;
+  recoveryCases(): Promise<Result<RecoveryCase[]>>;
+  requestRecovery(input: { email: string; verified: true }): Promise<Result<{id:string}>>;
+  approveRecovery(id: string): Promise<Result<{token:string;expiresInSeconds:number}>>;
+  cancelRecovery(id: string): Promise<Result<null>>;
+  redeemRecovery(input: { token: string; newPassword: string }): Promise<Result<null>>;
   revokeSessions(): Promise<Result<null>>;
   changePassword(input: z.infer<typeof changePasswordInput>): Promise<Result<null>>;
   listUsers(): Promise<Result<ManagedUser[]>>;

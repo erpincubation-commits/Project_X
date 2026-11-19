@@ -1,3 +1,4 @@
+import { RecoveryController } from './auth/recovery.controller';
 import { OperationsController } from './operations/operations.controller';
 import { OperationsService } from './operations/operations.service';
 import { Controller, Get, Module, ServiceUnavailableException } from '@nestjs/common';
@@ -27,7 +28,7 @@ class HealthController {
   }
 }
 @Module({
-  controllers: [HealthController, AuthController, CustomersController, AccessController, ProcurementController, BooksController,TradeController,OperationsController],
+  controllers: [HealthController, AuthController, RecoveryController, CustomersController, AccessController, ProcurementController, BooksController,TradeController,OperationsController],
   providers: [DatabaseService, AuthService, AuthGuard, PermissionsGuard, CustomersService, ProcurementService, BooksService,TradeService,SettlementService,ReportsService,OperationsService]
 })
 export class AppModule {}

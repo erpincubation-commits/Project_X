@@ -67,7 +67,7 @@ try {
     await page.getByRole('button', { name: 'I have saved my recovery codes', exact: true }).click();
     await page.getByRole('heading', { name: ['accountant','inventory_manager'].includes(role)?'Accounting & stock':['business_approver','purchasing'].includes(role)?'Purchasing workspace':'Your customers' }).waitFor();
     assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
-    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['changePassword','connect','createCustomer','getServer','listCustomers','login','logout','openLogs','reportError','setupStatus','setup','verifyMfa','me','revokeSessions','listUsers','createUser','updateUser','listAudit','listSuppliers','createSupplier','updateSupplier','listItems','createItem','updateItem','listPurchaseRequests','getPurchaseRequest','createPurchaseRequest','updatePurchaseRequest','submitPurchaseRequest','decidePurchaseRequest','listApprovers','recordHistory','booksOverview','setupBooks','createAccount','updateAccount','createPeriod','setPeriodState','listJournals','getJournal','createJournal','updateJournal','postJournal','reverseJournal','createWarehouse','updateWarehouse','listStockMovements','postStockMovement','stockReconciliation','trialBalance','listBankReconciliations','getBankReconciliation','createBankReconciliation','updateBankReconciliation','matchBankLine','finaliseBankReconciliation','booksHistory','listTaxCodes','createTaxCode','updateTaxCode','listOrders','getOrder','createOrder','cancelOrder','listReceipts','getReceipt','createReceipt','listSupplierInvoices','getSupplierInvoice','createSupplierInvoice','updateSupplierInvoice','matchSupplierInvoice','resolveSupplierInvoice','postSupplierInvoice','listCustomerInvoices','getCustomerInvoice','createCustomerInvoice','updateCustomerInvoice','postCustomerInvoice','voidInvoice','listPayments','getPayment','createPayment','updatePayment','submitPayment','decidePayment','executePayment','cancelPayment','paymentApprovers','listCollections','createCollection','subledgerReport','financialStatements','tradeHistory','listOrderReceipts','previewImport','commitImport','listPrivacyCases','createPrivacyCase','privacyAction','exportPrivacyCase'].sort());
+    assert.deepEqual(await page.evaluate(() => Object.keys(window.erp).sort()), ['recoveryCases','requestRecovery','approveRecovery','cancelRecovery','redeemRecovery','changePassword','connect','createCustomer','getServer','listCustomers','login','logout','openLogs','reportError','setupStatus','setup','verifyMfa','me','revokeSessions','listUsers','createUser','updateUser','listAudit','listSuppliers','createSupplier','updateSupplier','listItems','createItem','updateItem','listPurchaseRequests','getPurchaseRequest','createPurchaseRequest','updatePurchaseRequest','submitPurchaseRequest','decidePurchaseRequest','listApprovers','recordHistory','booksOverview','setupBooks','createAccount','updateAccount','createPeriod','setPeriodState','listJournals','getJournal','createJournal','updateJournal','postJournal','reverseJournal','createWarehouse','updateWarehouse','listStockMovements','postStockMovement','stockReconciliation','trialBalance','listBankReconciliations','getBankReconciliation','createBankReconciliation','updateBankReconciliation','matchBankLine','finaliseBankReconciliation','booksHistory','listTaxCodes','createTaxCode','updateTaxCode','listOrders','getOrder','createOrder','cancelOrder','listReceipts','getReceipt','createReceipt','listSupplierInvoices','getSupplierInvoice','createSupplierInvoice','updateSupplierInvoice','matchSupplierInvoice','resolveSupplierInvoice','postSupplierInvoice','listCustomerInvoices','getCustomerInvoice','createCustomerInvoice','updateCustomerInvoice','postCustomerInvoice','voidInvoice','listPayments','getPayment','createPayment','updatePayment','submitPayment','decidePayment','executePayment','cancelPayment','paymentApprovers','listCollections','createCollection','subledgerReport','financialStatements','tradeHistory','listOrderReceipts','previewImport','commitImport','listPrivacyCases','createPrivacyCase','privacyAction','exportPrivacyCase'].sort());
     return page;
   }
   const admin = await client('admin');
@@ -76,12 +76,18 @@ try {
     await operationsDesktopFlow({admin,pool,root});
   } else {
   await admin.getByRole('button', { name: 'Account security and access', exact: true }).click();
+  await admin.getByLabel('New user email', { exact: true }).fill('recovery-admin@smoke.test');
+  await admin.getByLabel('Initial password', { exact: true }).fill('desktop-test-password');
+  await admin.getByLabel('Role', { exact: true }).selectOption('admin');
+  await admin.getByRole('button', { name: 'Create account', exact: true }).click();
+  await admin.getByRole('cell', { name: 'recovery-admin@smoke.test', exact: true }).waitFor();
+  await admin.getByLabel('Role', { exact: true }).selectOption('reader');
   await admin.getByLabel('New user email', { exact: true }).fill('reader@smoke.test');
   await admin.getByLabel('Initial password', { exact: true }).fill('desktop-test-password');
   await admin.getByRole('button', { name: 'Create account', exact: true }).click();
   await admin.getByRole('cell', { name: 'reader@smoke.test', exact: true }).waitFor();
   await admin.getByRole('button', { name: 'Refresh audit history', exact: true }).click();
-  await admin.getByRole('cell', { name: 'user.created', exact: true }).waitFor();
+  await admin.getByRole('cell', { name: 'user.created', exact: true }).first().waitFor();
   await admin.getByLabel('New user email', { exact: true }).fill('business_approver@smoke.test');
   await admin.getByLabel('Initial password', { exact: true }).fill('desktop-test-password');
   await admin.getByLabel('Role', {exact:true}).selectOption('business_approver');
@@ -155,7 +161,28 @@ try {
   await tradeDesktopFlow({admin,approver,accountant,warehouse,client,pool,root,applications});
   await verifyAccessibility(accountant,'financial-statements',root);
   await operationsDesktopFlow({admin,pool,root});
+  const recoveryAdmin = await client('reader','recovery-admin');
   await admin.getByRole('button', { name: 'Account security and access', exact: true }).click();
+  await admin.getByLabel('Account email for recovery').fill('reader@smoke.test');
+  await admin.getByLabel("I independently verified the person's identity").check();
+  await admin.getByRole('button', { name: 'Request recovery', exact: true }).click();
+  await admin.getByText('Recovery request created. Ask another administrator to verify and approve it.').waitFor();
+  await recoveryAdmin.getByRole('button', { name: 'Account security and access', exact: true }).click();
+  await recoveryAdmin.getByRole('button', { name: 'Refresh recovery requests' }).click();
+  const recoveryRow = recoveryAdmin.locator('li').filter({hasText:'reader@smoke.test'});
+  recoveryAdmin.once('dialog', dialog => dialog.accept());
+  await recoveryRow.getByRole('button', { name: 'Verify and approve' }).click();
+  const recoveryToken = await recoveryAdmin.locator('.notice code').innerText();
+  await reader.getByRole('button', { name: 'Recover access', exact: true }).click();
+  await reader.getByLabel('Recovery token').fill(recoveryToken);
+  await reader.getByLabel('New password', { exact: true }).fill('recovered-desktop-password');
+  await reader.getByLabel('Confirm new password', { exact: true }).fill('recovered-desktop-password');
+  await reader.getByRole('button', { name: 'Complete recovery' }).click();
+  await reader.getByText('Recovery completed. Sign in with your new password and enrol a new authenticator.').waitFor();
+  await reader.getByLabel('Email', { exact: true }).fill('reader@smoke.test');
+  await reader.getByLabel('Password', { exact: true }).fill('recovered-desktop-password');
+  await reader.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await reader.getByRole('heading', { name: 'Set up your authenticator' }).waitFor();
   await admin.getByLabel('Current password', { exact: true }).fill('desktop-test-password');
   await admin.getByLabel('New password', { exact: true }).fill('desktop-replacement-password');
   await admin.getByLabel('Confirm new password', { exact: true }).fill('desktop-replacement-password');

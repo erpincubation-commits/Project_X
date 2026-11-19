@@ -30,3 +30,14 @@ test('lost password-change response clears local token and never records secrets
   assert.equal(calls, 2);
   for (const secret of [token, oldPassword, newPassword]) assert.ok(!JSON.stringify(logs).includes(secret));
 });
+
+test('lost recovery response is not retried or logged with credentials', async () => {
+  const client = new ApiClient('http://127.0.0.1:3001');
+  const recoveryToken = 'b'.repeat(64), password = 'recovery-password-secret';
+  let calls = 0;
+  fetchImpl = async () => { calls++; throw new Error('network failure'); };
+  const result = await client.redeemRecovery({ token: recoveryToken, newPassword: password });
+  assert.equal(result.ok, false);
+  assert.equal(calls, 1);
+  for (const secret of [recoveryToken, password]) assert.ok(!JSON.stringify(logs).includes(secret));
+});

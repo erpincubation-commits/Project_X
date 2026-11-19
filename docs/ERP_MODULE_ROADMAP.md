@@ -2,7 +2,7 @@
 
 **Reviewed:** 17 November 2026  
 **Status:** Proposed product plan; implementation, estimates and release acceptance remain separate work  
-**Source baseline:** Application 0.2.0 / schema 7; deployed versions and acceptance are unverified  
+**Source baseline:** Application 0.2.0 / schema 8; deployed versions and acceptance are unverified<br>
 **Planning assumptions:** Windows desktop, one company per deployment, INR, shared on-premises server; current pilot capacity remains one developer for two weeks
 
 ## 1. Direction and boundaries

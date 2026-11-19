@@ -18,7 +18,7 @@ The native database helper manages an isolated development cluster under `.local
 
 1. Confirm jurisdiction/tax rules and legacy-data migration. INR, moving weighted average and the source posting matrix are now defined.
 2. Extend the implemented MFA, administrative account management and nine-role permissions with configurable business roles and approval rules.
-3. Validate the implemented supplier/item/request/order/receiving path and its accounting with the controlled pilot. See [procurement](PROCUREMENT.md) and [trade workflows](TRADE_WORKFLOWS.md); current source requires schema 7, including imports/privacy and operational controls.
+3. Validate the implemented supplier/item/request/order/receiving path and its accounting with the controlled pilot. See [procurement](PROCUREMENT.md) and [trade workflows](TRADE_WORKFLOWS.md); current source requires schema 8, including imports/privacy and operational controls.
 4. Extend implemented source-linked purchasing, AP/AR, payment approval/recording and statements with returns, credit notes/refunds, inventory dispatch and jurisdiction-specific tax. See TRADE_WORKFLOWS.md for migration 6 and supported flows.
 5. Validate security, concurrency, accessibility, load, backup/recovery, migration and financial acceptance before production for the selected release scope.
 6. Follow the [six-module roadmap](ERP_MODULE_ROADMAP.md): complete core/Finance gaps, add CRM and Sales with basic stock fulfilment, then expand Supply Chain, HR core/expenses and Marketing. Manufacturing, payroll, assets and projects remain separately scoped later work.

@@ -23,7 +23,7 @@ The product should replace disconnected spreadsheets and manual handoffs with tr
 
 ### Current baseline
 
-Source baseline 0.2.0 / schema 7 includes mandatory MFA, nine fixed roles, customer/supplier/item masters, request approval, orders/receipts, INR books and weighted stock, AP/AR, payment approvals/recording, collections, reconciliation/statements, master imports and limited privacy operations. See the [user guide](USER_GUIDE.md) for implemented tasks and limits. Full stocked Sales, CRM, HR and Marketing are not implemented. Finance and Supply Chain are partial foundations. Requirements below include both implemented slices and remaining target behaviour; source availability and an installer do not establish deployment or production acceptance.
+Source baseline 0.2.0 / schema 8 includes mandatory MFA, nine fixed roles, customer/supplier/item masters, request approval, orders/receipts, INR books and weighted stock, AP/AR, payment approvals/recording, collections, reconciliation/statements, master imports and limited privacy operations. See the [user guide](USER_GUIDE.md) for implemented tasks and limits. Full stocked Sales, CRM, HR and Marketing are not implemented. Finance and Supply Chain are partial foundations. Requirements below include both implemented slices and remaining target behaviour; source availability and an installer do not establish deployment or production acceptance.
 
 ## 2. Users and needs
 

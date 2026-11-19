@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { roleInput, type AuditEvent, type ManagedUser, type Role, type User, type Result } from '@erp/contracts';
+import { roleInput, type RecoveryCase, type AuditEvent, type ManagedUser, type Role, type User, type Result } from '@erp/contracts';
 
 export function SecurityPanel({ user, expired }: { user: User; expired: (message?: string) => void }) {
+  const [cases, setCases] = useState<RecoveryCase[]>([]); const [recoveryEmail, setRecoveryEmail] = useState(''); const [verified, setVerified] = useState(false); const [recoveryToken, setRecoveryToken] = useState('');
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [auditPage, setAuditPage] = useState(1);
@@ -32,6 +33,15 @@ export function SecurityPanel({ user, expired }: { user: User; expired: (message
     </form>
     <button disabled={busy} className="secondary" onClick={() => void run(async () => { const result = await window.erp.revokeSessions(); if (result.ok) expired(); else data(result); })}>Sign out all my sessions</button>
     {error && <div className="notice error" role="alert">{error}</div>}{message && <div className="notice success" role="status">{message}</div>}
+    {user.role === 'admin' && <><h2>Identity recovery</h2><p>Independently verify identity using your approved procedure. A different administrator must independently verify and approve. Do not use this process for a restricted account or the last active administrator.</p>
+      <form onSubmit={event => { event.preventDefault(); void run(async () => { const result = data(await window.erp.requestRecovery({ email: recoveryEmail, verified: true })); if(result) { setRecoveryEmail(''); setVerified(false); setMessage('Recovery request created. Ask another administrator to verify and approve it.'); const list=data(await window.erp.recoveryCases()); if(list)setCases(list); } }); }}>
+        <label htmlFor="recovery-email">Account email for recovery</label><input id="recovery-email" type="email" required value={recoveryEmail} onChange={e=>setRecoveryEmail(e.target.value)}/>
+        <label><input type="checkbox" checked={verified} onChange={e=>setVerified(e.target.checked)}/> I independently verified the person's identity</label><button disabled={busy || !verified}>Request recovery</button>
+      </form>
+      <button className="secondary" disabled={busy} onClick={() => void run(async()=>{const list=data(await window.erp.recoveryCases());if(list)setCases(list);})}>Refresh recovery requests</button>
+      <ul>{cases.map(item=><li key={item.id}>{item.email} - {item.status} <button className="secondary" disabled={busy || item.status!=='PENDING' || item.requestedBy===user.id} onClick={()=>void run(async()=>{ if(!window.confirm('Have you independently verified this person using your approved procedure?'))return; const approval=await window.erp.approveRecovery(item.id); if(!approval.ok && (!approval.status || approval.status>=500 || (approval.status>=200 && approval.status<300))){setError('The approval result is unknown. Cancel the request and start again.');} else {const result=data(approval); if(result){setRecoveryToken(result.token);setMessage('Deliver the one-time token privately using your verified channel. It expires in 15 minutes.');}} const list=data(await window.erp.recoveryCases());if(list)setCases(list);})}>Verify and approve</button> <button className="secondary" disabled={busy} onClick={()=>void run(async()=>{data(await window.erp.cancelRecovery(item.id));setRecoveryToken('');const list=data(await window.erp.recoveryCases());if(list)setCases(list);})}>Cancel recovery</button></li>)}</ul>
+      {recoveryToken && <div className="notice"><p>Recovery token (shown once; deliver privately):</p><code>{recoveryToken}</code><button className="secondary" onClick={()=>setRecoveryToken('')}>Hide token</button></div>}
+    </>}
     {canManage && <><h2>User access</h2><p>New users enrol an authenticator before accessing the workspace. Changing access immediately revokes their existing sessions. You cannot change your own access.</p>
       <form onSubmit={event => { event.preventDefault(); void run(async () => { const result = data(await window.erp.createUser({ email, password, role })); setPassword(''); if (result) { setEmail(''); setMessage('Account created. Share its initial password through your approved secure channel.'); await loadUsers(); } }); }}>
         <label htmlFor="new-email">New user email</label><input id="new-email" type="email" required maxLength={254} value={email} onChange={event => setEmail(event.target.value)}/>
