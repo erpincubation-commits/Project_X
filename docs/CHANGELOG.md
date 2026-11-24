@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## Unreleased - CRM-01 decision draft (20 November 2026)
+
+- Added a proposed CRM scope, shared-party model, access and transition requirements, migration safeguards and synthetic review cases. Named stakeholders and decisions remain outstanding; CRM-01 and CF-17 are not accepted.
+- Updated the user guide and documentation index; existing workflows, schema, deployment and operator procedures are unchanged.
+
+## Unreleased - CRM epic and stories (19 November 2026)
+
+- Added a proposed CRM foundation epic and CRM-01–14 stories, with acceptance criteria, dependencies, release evidence and shared-party, privacy and Sales handoff boundaries.
+- Linked the backlog from the roadmap, documentation index and user guide. This is a planning change; no CRM functionality, role, migration or deployment was introduced.
+
 ## Unreleased - Core and Finance epic and stories (17 November 2026)
 
 - Added the proposed CORE-FIN epic and CF-01–21 stories with acceptance criteria, dependencies, evidence, scope decisions and traceability to existing FUP and MOD epics.

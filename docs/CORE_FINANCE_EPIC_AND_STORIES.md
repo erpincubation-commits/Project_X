@@ -129,7 +129,7 @@ Use synthetic fixtures and independent expected results; record revision, enviro
 3. Define independent approval/exception rules, rounding and final-allocation treatment, retry/locking, correction of errors and source/history linkage. Physical movement and financial credit may be separate events.
 4. Finance independently calculates representative expected postings and control totals, including partial/full, price/tax differences, later settlement and failed/concurrent attempts; review and version the contract.
 
-**Evidence:** Accountant-approved posting matrix, source/state diagrams and expected-results fixtures. **Dependencies:** CF-01. **Trace:** FUP-03, MOD-FIN-01, FR-FIN-09.
+**Evidence:** Accountant-approved posting matrix, source/state diagrams and expected-results fixtures. The [draft correction contract and synthetic fixtures](CF05_CORRECTION_POSTING_CONTRACT.md) await CF-01 decisions, independent Finance calculation and accountant approval; CF-05 remains open. **Dependencies:** CF-01. **Trace:** FUP-03, MOD-FIN-01, FR-FIN-09.
 
 ## CF-06 — Return an uninvoiced supplier receipt
 
