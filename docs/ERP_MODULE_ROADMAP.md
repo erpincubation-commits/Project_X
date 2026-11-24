@@ -1,6 +1,6 @@
 # ERP module expansion roadmap
 
-**Reviewed:** 17 November 2026  
+**Reviewed:** 19 November 2026<br>
 **Status:** Proposed product plan; implementation, estimates and release acceptance remain separate work  
 **Source baseline:** Application 0.2.0 / schema 8; deployed versions and acceptance are unverified<br>
 **Planning assumptions:** Windows desktop, one company per deployment, INR, shared on-premises server; current pilot capacity remains one developer for two weeks
@@ -71,7 +71,7 @@ The solid path is the proposed delivery order for limited capacity, not a techni
 
 ## 5. Candidate backlog and acceptance
 
-These stories are proposed, unestimated and outside PIL-01–08. FUP items remain open until their own evidence is accepted. Detailed contracts, UI designs and test fixtures are required before scheduling an implementation story. The [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) refine phase 1, FUP-01–08 and MOD-PLT-01/MOD-FIN-01/02 into traceable candidate work; they do not add scope to the current pilot.
+These stories are proposed, unestimated and outside PIL-01–08. FUP items remain open until their own evidence is accepted. Detailed contracts, UI designs and test fixtures are required before scheduling an implementation story. The [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) refine phase 1, FUP-01–08 and MOD-PLT-01/MOD-FIN-01/02 into traceable candidate work. The [CRM epic and user stories](CRM_EPIC_AND_USER_STORIES.md) refine MOD-CRM-01 for phase 2A. Neither backlog adds scope to the current pilot.
 
 | ID / accountable function to name | User outcome | Minimum acceptance |
 | --- | --- | --- |
@@ -141,3 +141,4 @@ The [documentation index](README.md) maps current instructions and planning docu
 | --- | --- | --- |
 | 2026-11-17 | Initial six-module plan | Reviewed source/workflow baseline and official ERPNext/Frappe references. Added proposed scope, dependencies, acceptance and document reconciliation. No application change, migration, deployment or test acceptance claimed. |
 | 2026-11-17 | Core and Finance story refinement | Linked the proposed phase 1 epic and CF-01–21 backlog, preserving pilot capacity and existing FUP/MOD traceability. Scope, estimates and release decisions remain open. |
+| 2026-11-19 | CRM story refinement | Linked proposed CRM-01–14 stories and their shared-party, access, privacy and Sales handoff dependencies. Phase 2A remains unimplemented and unscheduled. |

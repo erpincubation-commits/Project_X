@@ -1,6 +1,6 @@
 # SMB ERP desktop user guide
 
-**Last reviewed:** 19 November 2026
+**Last reviewed:** 20 November 2026
 
 **Application baseline:** package version 0.2.0, implemented workflows through database schema 8<br>
 **Audience:** Windows desktop users, administrators, purchasing, inventory and finance teams
@@ -413,7 +413,7 @@ Current boundaries include fixed roles/policies, one company per deployment, INR
 
 ## Planned modules and availability
 
-The [ERP module roadmap](ERP_MODULE_ROADMAP.md) proposes Finance completion, CRM/Sales, broader Supply Chain, HR and Marketing using [ERPNext/Frappe workflow references](ERPNEXT_MODULE_CROSSWALK.md). The proposed [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) provide more detail for the first expansion phase. The [draft Finance decision record](CF01_FINANCE_DECISION_RECORD.md) collects unresolved scope and policy decisions and synthetic examples for review; it is not approved or authority to post. These are development plans, not additional installed workspaces. Current source is version 0.2.0 / schema 8; the operator must confirm your deployed versions separately.
+The [ERP module roadmap](ERP_MODULE_ROADMAP.md) proposes Finance completion, CRM/Sales, broader Supply Chain, HR and Marketing using [ERPNext/Frappe workflow references](ERPNEXT_MODULE_CROSSWALK.md). The proposed [Core and Finance epic and stories](CORE_FINANCE_EPIC_AND_STORIES.md) provide more detail for the first expansion phase. The [draft Finance decision record](CF01_FINANCE_DECISION_RECORD.md) collects unresolved scope and policy decisions and synthetic examples for review; it is not approved or authority to post. The [draft correction posting contract](CF05_CORRECTION_POSTING_CONTRACT.md) proposes return, credit and refund rules and fixtures for independent Finance and accountant review; it is not approved or implemented. These are development plans, not additional installed workspaces. Current source is version 0.2.0 / schema 8; the operator must confirm your deployed versions separately.
 
 | Area | What you can use now | Planned addition |
 | --- | --- | --- |
@@ -422,6 +422,8 @@ The [ERP module roadmap](ERP_MODULE_ROADMAP.md) proposes Finance completion, CRM
 | Supply Chain | Current purchasing, accepted receipts, warehouses, stock and transfers. | Replenishment, RFQs/quote comparison, quality/quarantine, returns and independent count adjustment. |
 | HR | Login accounts support application access; they are not employee profiles. | Employees, leave/attendance and independently approved expenses. Payroll needs a separate reviewed jurisdiction. |
 | Marketing | No campaign, audience or communication-sending workspace. | Campaign planning, eligible audiences, source/results reporting; outbound delivery separately selected and accepted. |
+
+The proposed [CRM epic and user stories](CRM_EPIC_AND_USER_STORIES.md) detail future lead, contact and opportunity workflows. The [CRM-01 decision draft](CRM01_SCOPE_DECISION_RECORD.md) sets out candidate identity, access and workflow rules for stakeholder review; reviewers and decisions remain outstanding. These documents do not enable CRM screens, permissions or imports in the current application.
 
 Continue using the actual workspace names and steps in this guide. Current master-import templates do not accept employees, leads or campaign audiences. There are no module enable/install actions in this release, and upgrading the desktop alone does not add server/database workflows. The [controlled pilot](NEXT_SPRINT_PLAN.md) keeps its existing scope; new module instructions, permissions, imports and upgrade steps will be documented when implemented and accepted. No operator action is required by this planning revision.
 
@@ -433,6 +435,9 @@ The root [contributor instructions](../AGENTS.md) and [documentation maintenance
 
 | Date | Baseline / change | Guide update |
 | --- | --- | --- |
+| 2026-11-20 | 0.2.0 / schema 8; CRM-01 decision draft | Reviewed customer creation, roles, imports, privacy, recovery and planned CRM limits against the proposed identity and workflow rules. Current tasks and operator procedures remain unchanged; continue using existing customer workflows. Stakeholder review, migration and release decisions remain open; no deployment or acceptance is implied. |
+| 2026-11-19 | 0.2.0 / schema 8; CRM story refinement | Reviewed customer creation, roles, imports, privacy and planned CRM limits against the proposed backlog. Added a planning reference; existing workflows and operator procedures are unchanged. No new module, migration, deployment or acceptance is implied. |
+| 2026-11-19 | 0.2.0 / schema 8; CF-05 draft contract | Reviewed receipt, invoice, collection, accounting and correction limits against the proposed contract. Current tasks and operator procedures are unchanged; continue escalating unsupported corrections to Finance. Independent Finance calculation, accountant approval and CF-01 decisions remain outstanding; no migration or deployment is implied. |
 | 2026-11-19 | 0.2.0 / schema 8; CF-03 identity recovery | Added two-administrator recovery, token handling, MFA re-enrolment, cancellation and escalation guidance. Upgrade client and server and migrate after backup; operator verification and emergency procedures still require local adoption and rehearsal. |
 | 2026-11-19 | 0.2.0 / schema 7; CF-03 draft threat review | Reviewed sign-in, recovery codes, privacy restriction and last-administrator guidance against the proposed recovery design. Operator-assisted recovery remains unavailable; no policy approval, operator rehearsal, schema migration or deployment is implied. |
 | 2026-11-17 | 0.2.0 / schema 7; FUP-01 password change | Reviewed sign-in, session revocation, password limits and uncertain responses against the new desktop and API flow. Upgrade client and server together; no schema migration or deployment acceptance is implied. |
