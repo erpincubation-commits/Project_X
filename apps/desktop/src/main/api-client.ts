@@ -16,6 +16,9 @@ export function normalizeServer(value: string): string {
 }
 
 export class ApiClient implements BooksAPI {
+  listServiceAcceptances(id:string,entryLagDays:'0'|'1'|'3'|'7'='0'){return this.request<C.ServiceAcceptance[]>(`/trade/orders/${id}/service-acceptances?entryLagDays=${entryLagDays}`);}
+  getServiceAcceptance(id:string){return this.request<C.ServiceAcceptance>(`/trade/service-acceptances/${id}`);}
+  createServiceAcceptance(...[input,key]:Parameters<C.TradeAPI['createServiceAcceptance']>){return this.request<C.ServiceAcceptance>('/trade/service-acceptances','POST',input,key);}
   listOrderReceipts(id:string){return this.request<C.GoodsReceipt[]>(`/trade/orders/${id}/receipts`);}
   private token: string | undefined;
   private challenge: string | undefined;
@@ -107,9 +110,13 @@ export class ApiClient implements BooksAPI {
   listCustomers(page: number) { return this.request<CustomerPage>(`/customers?page=${page}`); }
   createCustomer(input: CustomerInput, requestId: string) { return this.request<Customer>('/customers', 'POST', input, requestId); }
   private query(query: Partial<ProcurementQuery>) { return new URLSearchParams(Object.entries(query).map(([key,value])=>[key,String(value)])).toString(); }
-  listSuppliers(query: Partial<ProcurementQuery>) { return this.request<Page<Supplier>>(`/procurement/suppliers?${this.query(query)}`); }
+  listSuppliers(query: Partial<import('@erp/contracts').SupplierQuery>) { return this.request<Page<Supplier>>(`/procurement/suppliers?${this.query(query)}`); }
+  findSupplierDuplicates(query: import('@erp/contracts').SupplierDuplicateQuery) { return this.request<import('@erp/contracts').SupplierDuplicateResult>('/procurement/suppliers/duplicate-check','POST',query); }
   createSupplier(input: SupplierInput,key: string) { return this.request<Supplier>('/procurement/suppliers','POST',input,key); }
   updateSupplier(id: string,input: SupplierUpdateInput,key: string) { return this.request<Supplier>(`/procurement/suppliers/${id}`,'PATCH',input,key); }
+  supplierQualification(id:string) {return this.request<{qualification:import('@erp/contracts').SupplierQualification|null}>(`/procurement/suppliers/${id}/qualification`);}
+  submitSupplierQualification(id:string,input:import('@erp/contracts').SupplierQualificationInput,key:string) {return this.request<import('@erp/contracts').SupplierQualification>(`/procurement/suppliers/${id}/qualification`,'POST',input,key);}
+  decideSupplierQualification(id:string,input:import('@erp/contracts').SupplierQualificationDecision,key:string) {return this.request<import('@erp/contracts').SupplierQualification>(`/procurement/suppliers/${id}/qualification/decision`,'POST',input,key);}
   listItems(query: Partial<ProcurementQuery>) { return this.request<Page<Item>>(`/procurement/items?${this.query(query)}`); }
   createItem(input: ItemInput,key: string) { return this.request<Item>('/procurement/items','POST',input,key); }
   updateItem(id: string,input: ItemUpdateInput,key: string) { return this.request<Item>(`/procurement/items/${id}`,'PATCH',input,key); }
@@ -118,6 +125,18 @@ export class ApiClient implements BooksAPI {
   createPurchaseRequest(input: PurchaseRequestInput,key: string) { return this.request<PurchaseRequest>('/procurement/requests','POST',input,key); }
   updatePurchaseRequest(id: string,input: PurchaseRequestUpdateInput,key: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}`,'PATCH',input,key); }
   submitPurchaseRequest(id: string,input: SubmitRequestInput,key: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}/submit`,'POST',input,key); }
+  withdrawPurchaseRequest(id: string,input: {version:number},key: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}/withdraw`,'POST',input,key); }
+  purchaseRequestOverview() { return this.request<import('@erp/contracts').RequestOverview>('/procurement/request-overview','GET'); }
+  approvalWorkload(page:number) { return this.request<import('@erp/contracts').ApprovalWorkload>(`/procurement/approval-workload?page=${page}`,'GET'); }
+  approvalHolding(input:{from:string;to:string;page:number}){return this.request<import('@erp/contracts').ApprovalHolding>(`/procurement/approval-holding?${new URLSearchParams({from:input.from,to:input.to,page:String(input.page)})}`);}
+  approvalCycles(input:{from:string;to:string;page:number}){return this.request<import('@erp/contracts').ApprovalCycles>(`/procurement/approval-cycles?${new URLSearchParams({from:input.from,to:input.to,page:String(input.page)})}`);}
+  listSupplierQuotes(id:string) { return this.request<import('@erp/contracts').SupplierQuote[]>(`/procurement/requests/${id}/quotes`,'GET'); }
+  listQuoteRecommendations(id:string) { return this.request<import('@erp/contracts').QuoteRecommendation[]>(`/procurement/requests/${id}/quote-recommendations`,'GET'); }
+  recommendSupplierQuote(id:string,input:import('@erp/contracts').RecommendQuoteInput,key:string) { return this.request<import('@erp/contracts').QuoteRecommendation>(`/procurement/quotes/${id}/recommend`,'POST',input,key); }
+  createSupplierQuote(input:import('@erp/contracts').SupplierQuoteInput,key:string) { return this.request<import('@erp/contracts').SupplierQuote>('/procurement/quotes','POST',input,key); }
+  withdrawSupplierQuote(id:string,input:import('@erp/contracts').WithdrawQuoteInput,key:string) { return this.request<import('@erp/contracts').SupplierQuote>(`/procurement/quotes/${id}/withdraw`,'POST',input,key); }
+  reassignPurchaseRequest(id: string,input: SubmitRequestInput,key: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}/reassign`,'POST',input,key); }
+  handoffPurchaseRequest(id:string,input:import('@erp/contracts').HandoffRequestInput,key:string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}/handoff`,'POST',input,key); }
   decidePurchaseRequest(id: string,input: DecideRequestInput,key: string) { return this.request<PurchaseRequest>(`/procurement/requests/${id}/decide`,'POST',input,key); }
   listApprovers() { return this.request<Approver[]>('/procurement/approvers'); }
   recordHistory(kind: 'supplier' | 'item' | 'purchase_request',id: string) { return this.request<RecordHistory[]>(`/procurement/history/${kind}/${id}`); }
@@ -147,20 +166,27 @@ export class ApiClient implements BooksAPI {
   finaliseBankReconciliation(...[id,input,key]:Parameters<BooksAPI['finaliseBankReconciliation']>){return this.request<BankReconciliation>(`/books/bank-reconciliations/${id}/finalise`,'POST',input,key);}
   booksHistory(...[kind,id]:Parameters<BooksAPI['booksHistory']>){return this.request<RecordHistory[]>(`/books/history/${kind}/${id}`);}
   listTaxCodes(...[]:Parameters<C.TradeAPI['listTaxCodes']>){return this.request<C.TaxCode[]>(`/trade/taxes`);}
+  getMatchingPolicy(...[]:Parameters<C.TradeAPI['getMatchingPolicy']>){return this.request<C.MatchingPolicy>('/trade/matching-policy');}
+  updateMatchingPolicy(...[input,key]:Parameters<C.TradeAPI['updateMatchingPolicy']>){return this.request<C.MatchingPolicy>('/trade/matching-policy','PATCH',input,key);}
   createTaxCode(...[input,key]:Parameters<C.TradeAPI['createTaxCode']>){return this.request<C.TaxCode>(`/trade/taxes`, 'POST',input,key);}
   updateTaxCode(...[id,input,key]:Parameters<C.TradeAPI['updateTaxCode']>){return this.request<C.TaxCode>(`/trade/taxes/${id}`, 'PATCH',input,key);}
-  listOrders(...[page]:Parameters<C.TradeAPI['listOrders']>){return this.request<C.Page<C.PurchaseOrder>>(`/trade/orders?page=${page}`);}
+  listOrders(...[page,filters]:Parameters<C.TradeAPI['listOrders']>){const query=new URLSearchParams({page:String(page)});if(filters?.search)query.set('search',filters.search);if(filters?.status)query.set('status',filters.status);return this.request<C.Page<C.PurchaseOrder>>(`/trade/orders?${query}`);}
   getOrder(...[id]:Parameters<C.TradeAPI['getOrder']>){return this.request<C.PurchaseOrder>(`/trade/orders/${id}`);}
   createOrder(...[input,key]:Parameters<C.TradeAPI['createOrder']>){return this.request<C.PurchaseOrder>(`/trade/orders`, 'POST',input,key);}
   cancelOrder(...[id,input,key]:Parameters<C.TradeAPI['cancelOrder']>){return this.request<C.PurchaseOrder>(`/trade/orders/${id}/cancel`, 'POST',input,key);}
-  listReceipts(...[page]:Parameters<C.TradeAPI['listReceipts']>){return this.request<C.Page<C.GoodsReceipt>>(`/trade/receipts?page=${page}`);}
+  proposeOrderAmendment(...[id,input,key]:Parameters<C.TradeAPI['proposeOrderAmendment']>){return this.request<C.PurchaseOrder>(`/trade/orders/${id}/description-amendment`,'POST',input,key);}
+  decideOrderAmendment(...[id,input,key]:Parameters<C.TradeAPI['decideOrderAmendment']>){return this.request<C.PurchaseOrder>(`/trade/orders/${id}/description-amendment/decision`,'POST',input,key);}
+  acknowledgeOrder(...[id,input,key]:Parameters<C.TradeAPI['acknowledgeOrder']>){return this.request<C.PurchaseOrder>(`/trade/orders/${id}/acknowledgement`, 'POST',input,key);}
+  listReceipts(...[page,filters]:Parameters<C.TradeAPI['listReceipts']>){const query=new URLSearchParams({page:String(page)});if(filters?.search)query.set('search',filters.search);if(filters?.damagedOnly)query.set('damagedOnly','true');if(filters?.entryLagDays&&filters.entryLagDays!=='0')query.set('entryLagDays',filters.entryLagDays);return this.request<C.Page<C.GoodsReceipt>>(`/trade/receipts?${query}`);}
   getReceipt(...[id]:Parameters<C.TradeAPI['getReceipt']>){return this.request<C.GoodsReceipt>(`/trade/receipts/${id}`);}
   createReceipt(...[input,key]:Parameters<C.TradeAPI['createReceipt']>){return this.request<C.GoodsReceipt>(`/trade/receipts`, 'POST',input,key);}
-  listSupplierInvoices(...[page]:Parameters<C.TradeAPI['listSupplierInvoices']>){return this.request<C.Page<C.TradeInvoice>>(`/trade/supplier-invoices?page=${page}`);}
+  listSupplierInvoices(...[page,filters]:Parameters<C.TradeAPI['listSupplierInvoices']>){const query=new URLSearchParams({page:String(page)});if(filters?.search)query.set('search',filters.search);if(filters?.status)query.set('status',filters.status);if(filters?.orderId)query.set('orderId',filters.orderId);return this.request<C.Page<C.TradeInvoice>>(`/trade/supplier-invoices?${query}`);}
   getSupplierInvoice(...[id]:Parameters<C.TradeAPI['getSupplierInvoice']>){return this.request<C.TradeInvoice>(`/trade/supplier-invoices/${id}`);}
   createSupplierInvoice(...[input,key]:Parameters<C.TradeAPI['createSupplierInvoice']>){return this.request<C.TradeInvoice>(`/trade/supplier-invoices`, 'POST',input,key);}
   updateSupplierInvoice(...[id,input,key]:Parameters<C.TradeAPI['updateSupplierInvoice']>){return this.request<C.TradeInvoice>(`/trade/supplier-invoices/${id}`, 'PATCH',input,key);}
   matchSupplierInvoice(...[id,input,key]:Parameters<C.TradeAPI['matchSupplierInvoice']>){return this.request<C.TradeInvoice>(`/trade/supplier-invoices/${id}/match`, 'POST',input,key);}
+  listInvoiceExceptionReviewers(){return this.request<C.InvoiceExceptionReviewer[]>('/trade/supplier-invoices/exception-reviewers');}
+  assignInvoiceException(...[id,input,key]:Parameters<C.TradeAPI['assignInvoiceException']>){return this.request<C.TradeInvoice>(`/trade/supplier-invoices/${id}/assign-exception`, 'POST',input,key);}
   resolveSupplierInvoice(...[id,input,key]:Parameters<C.TradeAPI['resolveSupplierInvoice']>){return this.request<C.TradeInvoice>(`/trade/supplier-invoices/${id}/resolve`, 'POST',input,key);}
   postSupplierInvoice(...[id,input,key]:Parameters<C.TradeAPI['postSupplierInvoice']>){return this.request<C.TradeInvoice>(`/trade/supplier-invoices/${id}/post`, 'POST',input,key);}
   listCustomerInvoices(...[page]:Parameters<C.TradeAPI['listCustomerInvoices']>){return this.request<C.Page<C.TradeInvoice>>(`/trade/customer-invoices?page=${page}`);}
@@ -169,7 +195,7 @@ export class ApiClient implements BooksAPI {
   updateCustomerInvoice(...[id,input,key]:Parameters<C.TradeAPI['updateCustomerInvoice']>){return this.request<C.TradeInvoice>(`/trade/customer-invoices/${id}`, 'PATCH',input,key);}
   postCustomerInvoice(...[id,input,key]:Parameters<C.TradeAPI['postCustomerInvoice']>){return this.request<C.TradeInvoice>(`/trade/customer-invoices/${id}/post`, 'POST',input,key);}
   voidInvoice(...[id,input,key]:Parameters<C.TradeAPI['voidInvoice']>){return this.request<C.TradeInvoice>(`/trade/invoices/${id}/void`, 'POST',input,key);}
-  listPayments(...[page]:Parameters<C.TradeAPI['listPayments']>){return this.request<C.Page<C.PaymentBatch>>(`/trade/payments?page=${page}`);}
+  listPayments(...[page,pendingOnly,filters]:Parameters<C.TradeAPI['listPayments']>){const query=new URLSearchParams({page:String(page)});if(pendingOnly)query.set('pendingOnly','true');if(filters?.search)query.set('search',filters.search);if(filters?.status)query.set('status',filters.status);return this.request<C.Page<C.PaymentBatch>>(`/trade/payments?${query}`);}
   getPayment(...[id]:Parameters<C.TradeAPI['getPayment']>){return this.request<C.PaymentBatch>(`/trade/payments/${id}`);}
   createPayment(...[input,key]:Parameters<C.TradeAPI['createPayment']>){return this.request<C.PaymentBatch>(`/trade/payments`, 'POST',input,key);}
   updatePayment(...[id,input,key]:Parameters<C.TradeAPI['updatePayment']>){return this.request<C.PaymentBatch>(`/trade/payments/${id}`, 'PATCH',input,key);}

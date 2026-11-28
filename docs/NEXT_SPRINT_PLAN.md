@@ -20,7 +20,7 @@ The sprint preserves the agreed product choices: Electron/React/TypeScript, Nest
 
 ## 2. Current baseline and gaps
 
-The following is a source/document review, not a new execution of the application's tests or a verification of the deployed database. The current source requires schema **8**; the installed schema must be checked during staging preparation.
+The following is a source/document review, not a new execution of the application's tests or a verification of the deployed database. The source currently requires schema **10**; the installed schema must be checked during staging preparation.
 
 | Area | Implemented in the committed source | Work required for the pilot |
 | --- | --- | --- |

@@ -14,6 +14,10 @@ export async function booksDesktopFlow({admin,client,pool,root,applications}){
   await admin.getByRole('cell',{name:`${role}@smoke.test`,exact:true}).waitFor();
  }
  const accountant=await client('accountant');
+ await accountant.getByRole('button',{name:'Purchasing',exact:true}).click();
+ await accountant.getByRole('heading',{name:'Supplier register',exact:true}).waitFor();
+ assert.equal(await accountant.getByRole('button',{name:'Purchase requests',exact:true}).count(),0);
+ await accountant.getByRole('button',{name:'Accounting & stock',exact:true}).click();
  const dates=(await pool.query('SELECT current_date::text AS date,(current_date-1)::text AS bank_date')).rows[0],date=dates.date,bankDate=dates.bank_date,year=bankDate.slice(0,4);
  await accountant.getByLabel('Period name',{exact:true}).fill('Current financial period');
  await accountant.getByLabel('Period start',{exact:true}).fill(`${year}-01-01`);
@@ -49,7 +53,7 @@ export async function booksDesktopFlow({admin,client,pool,root,applications}){
  await accountant.getByLabel('Match Capital',{exact:true}).selectOption({label:`J-1 · ${bankDate} · 100.00`});
  await accountant.getByRole('button',{name:'Save match Capital',exact:true}).click();
  await accountant.getByRole('button',{name:'Finalise bank reconciliation',exact:true}).click();
- await accountant.getByText(/FINALISED · version/).waitFor();
+ await accountant.locator('.books-record-status').filter({hasText:'FINALISED'}).waitFor();
  const warehouse=await client('inventory_manager');
  await warehouse.getByRole('button',{name:'Warehouses & stock',exact:true}).click();
  for(const [code,name]of [['MAIN','Main warehouse'],['SECOND','Second warehouse']]){

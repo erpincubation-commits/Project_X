@@ -34,7 +34,7 @@ All business data is shared through the customer-operated application server. Th
 
 ## 2. Roles and workspace access
 
-The current schema 8 app has nine fixed roles and one role per account. [User guide roles/navigation](USER_GUIDE.md#roles-and-navigation) and [authentication](AUTHENTICATION.md) describe actual grants. The table below distinguishes implemented responsibilities from proposed configurable scope. Server-side authorisation remains decisive.
+The schema 8 review baseline had nine fixed roles and one role per account. [User guide roles/navigation](USER_GUIDE.md#roles-and-navigation) and [authentication](AUTHENTICATION.md) describe actual grants. The table below distinguishes implemented responsibilities from proposed configurable scope. Server-side authorisation remains decisive.
 
 | Role | Workspace and actions | Status |
 | --- | --- | --- |

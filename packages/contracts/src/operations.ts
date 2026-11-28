@@ -11,7 +11,7 @@ export const privacyActionInput = z.object({ version:z.number().int().min(1), ac
 export interface ImportPreview { id:string|null; digest:string|null; expiresAt:string|null; kind:string; count:number; errors:{row:number;field:string;message:string}[]; normalized:unknown[] }
 export interface ImportResult { id:string; count:number; records:string[] }
 export interface PrivacyCase { id:string; subjectType:'user'|'supplier'|'customer'; subjectId:string; kind:string; status:string; legalHold:boolean; version:number; verificationRef:string; resolutionRef:string|null; createdAt:string; receivedOn:string; dueAt:string }
-export interface PrivacyExport { caseId:string; generatedAt:string; record:unknown; history:unknown[]; activity:unknown[]; reviewRequired:string[] }
+export interface PrivacyExport { caseId:string; generatedAt:string; record:unknown; history:unknown[]; activity:unknown[]; supplierQuotes:unknown[]; supplierRecommendations:unknown[]; supplierServiceAcceptances:unknown[]; reviewRequired:string[] }
 export interface OperationsAPI {
  previewImport(input:z.infer<typeof importInput>,key:string):Promise<Result<ImportPreview>>;
  commitImport(id:string,input:z.infer<typeof importCommitInput>,key:string):Promise<Result<ImportResult>>;

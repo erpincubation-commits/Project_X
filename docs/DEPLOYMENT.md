@@ -2,6 +2,8 @@
 
 ## Development on one computer
 
+Supplier policy: set `REQUIRE_SUPPLIER_QUALIFICATION=true` in the API service environment to require approved, unexpired qualification for every new purchase order. Default false permits suppliers without a qualification record while still blocking pending/rejected/expired recorded qualifications. Restart all API instances with the same setting. Invalid values fail configuration validation. Review **Not recorded** suppliers and complete independent qualification review before activation; verify the policy in staging. See [operator steps](OPERATIONS_RUNBOOK.md#supplier-qualification-policy). No migration is required, and this source change does not reconfigure a running installation.
+
 The API listens on `127.0.0.1:3001` by default. PostgreSQL listens on `127.0.0.1:5432`. `npm start` is a convenience launcher for development; it does not install a Windows service. For independent processes, build once and run `npm run server` and `npm run desktop` in separate terminals.
 
 ## Multiple computers

@@ -5,6 +5,9 @@ export const projectRoot = resolve(__dirname, '../../..');
 config({ path: resolve(projectRoot, '.env'), quiet: true });
 
 export function settings() {
+  const qualificationSetting=process.env.REQUIRE_SUPPLIER_QUALIFICATION??'false';
+  if(!['true','false'].includes(qualificationSetting))throw new Error('REQUIRE_SUPPLIER_QUALIFICATION must be true or false.');
+  const requireSupplierQualification=qualificationSetting==='true';
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL is missing. Run npm run setup or configure the root .env file.');
   const parsed = new URL(databaseUrl);
@@ -15,5 +18,5 @@ export function settings() {
   if (!['127.0.0.1', 'localhost', '::1'].includes(host) && process.env.TLS_PROXY_CONFIRMED !== 'true') {
     throw new Error('Remote listening requires TLS_PROXY_CONFIRMED=true and a configured HTTPS reverse proxy. See docs/DEPLOYMENT.md.');
   }
-  return { databaseUrl, port, host };
+  return { databaseUrl, port, host, requireSupplierQualification };
 }

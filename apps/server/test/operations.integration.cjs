@@ -3,7 +3,7 @@ require('../dist/config.js');const {migrate,migrationStatus}=require('../dist/da
 test('operations: import previews and atomic retry-safe commits, privacy holds, access extracts, restrictions and retained history',async()=>{
  process.env.MFA_ENCRYPTION_KEY='a'.repeat(64);const original=process.env.DATABASE_URL,owner=new Pool({connectionString:original}),schema=`erp_test_${randomUUID().replaceAll('-','')}`;await owner.query(`CREATE SCHEMA "${schema}"`);const url=new URL(original);url.searchParams.set('options',`-c search_path=${schema}`);process.env.DATABASE_URL=url.toString();const pool=new Pool({connectionString:url.toString()});let app;
  try {
-  const dry=await migrate(pool,{dryRun:true});assert.equal(dry.pending.at(-1),8);assert.equal((await pool.query("SELECT to_regclass('erp_customers') AS t")).rows[0].t,null);await migrate(pool);assert.ok((await migrationStatus(pool)).every(r=>r.verified));
+  const dry=await migrate(pool,{dryRun:true});assert.equal(dry.pending.at(-1),16);assert.equal((await pool.query("SELECT to_regclass('erp_customers') AS t")).rows[0].t,null);await migrate(pool);assert.ok((await migrationStatus(pool)).every(r=>r.verified));
   await pool.query("UPDATE erp_schema_migrations SET checksum='changed' WHERE version=1");await assert.rejects(()=>migrate(pool),/checksum mismatch/);await pool.query('UPDATE erp_schema_migrations SET checksum=NULL WHERE version=1');await migrate(pool);
   const people={};for(const role of ['admin','purchasing','reader']){const id=randomUUID(),token=randomBytes(32).toString('hex');await pool.query('INSERT INTO erp_users(id,email,password_hash,role,mfa_secret) VALUES($1,$2,\'fixture\',$3,$4)',[id,role+'@operations.invalid',role,encryptSecret('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ',id)]);await pool.query("INSERT INTO erp_sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '1 hour')",[digest(token),id]);people[role]={id,token};}
   app=await require('../dist/bootstrap.js').createApplication();await app.listen(0,'127.0.0.1');const base=await app.getUrl();
@@ -14,6 +14,20 @@ test('operations: import previews and atomic retry-safe commits, privacy holds, 
   const preview=await call('/imports/preview',input);assert.equal(preview.status,201);assert.equal(preview.data.normalized[0].code,'S-1');assert.equal((await pool.query('SELECT count(*) FROM erp_suppliers')).rows[0].count,'0');
   assert.equal((await call(`/imports/${preview.data.id}/commit`,{digest:'0'.repeat(64)})).status,409);
   const key=randomUUID(),commit=()=>call(`/imports/${preview.data.id}/commit`,{digest:preview.data.digest},'admin',key);const results=await Promise.all([commit(),commit()]);assert.deepEqual(results[0],results[1]);assert.equal(results[0].data.count,1);const supplier=results[0].data.records[0];assert.equal((await pool.query('SELECT count(*) FROM erp_record_history WHERE entity_id=$1',[supplier])).rows[0].count,'1');
+  const duplicatePreview=await call('/imports/preview',{kind:'supplier',rows:[{code:'S-DUP',name:' supplier ',contactEmail:''}]});
+  assert.equal(duplicatePreview.data.id,null);assert.ok(duplicatePreview.data.errors.some(error=>error.field==='duplicateReviewRef'));
+  const intraBatch=await call('/imports/preview',{kind:'supplier',rows:[{code:'S-BATCH-A',name:'Shared name'},{code:'S-BATCH-B',name:' shared  name '}]});
+  assert.equal(intraBatch.data.id,null);assert.ok(intraBatch.data.errors.some(error=>error.row===2&&error.field==='duplicateReviewRef'));
+  const reviewedPreview=await call('/imports/preview',{kind:'supplier',rows:[{code:'S-REVIEWED',name:'Supplier',duplicateReviewRef:'SUP-IMPORT-REVIEW'}]});
+  assert.ok(reviewedPreview.data.id);
+  const reviewedCommit=await call(`/imports/${reviewedPreview.data.id}/commit`,{digest:reviewedPreview.data.digest});
+  assert.equal(reviewedCommit.status,201);assert.equal(reviewedCommit.data.count,1);
+  const reviewedHistory=(await pool.query('SELECT snapshot FROM erp_record_history WHERE entity_id=$1',[reviewedCommit.data.records[0]])).rows[0].snapshot;
+  assert.equal(reviewedHistory.context.duplicateReview.reference,'SUP-IMPORT-REVIEW');
+  const concurrentPreview=await call('/imports/preview',{kind:'supplier',rows:[{code:'S-CONCURRENT',name:'Concurrent supplier'}]});
+  await pool.query("INSERT INTO erp_suppliers(id,code,name,created_by,updated_by) VALUES($1,'S-OTHER','Concurrent supplier',$2,$2)",[randomUUID(),people.admin.id]);
+  assert.equal((await call(`/imports/${concurrentPreview.data.id}/commit`,{digest:concurrentPreview.data.digest})).status,409);
+  assert.equal((await pool.query("SELECT count(*) FROM erp_suppliers WHERE code='S-CONCURRENT'")).rows[0].count,'0');
   const stale=await call('/imports/preview',{kind:'item',rows:[{code:'ATOMIC-1',name:'First',unit:'EA'},{code:'ATOMIC-2',name:'Second',unit:'EA'}]});await pool.query("INSERT INTO erp_items(id,code,name,unit,created_by,updated_by) VALUES($1,'ATOMIC-2','Concurrent','EA',$2,$2)",[randomUUID(),people.admin.id]);assert.equal((await call(`/imports/${stale.data.id}/commit`,{digest:stale.data.digest})).status,409);assert.equal((await pool.query("SELECT 1 FROM erp_items WHERE code='ATOMIC-1'")).rowCount,0);
   const expired=await call('/imports/preview',{kind:'customer',rows:[{code:'EXPIRED',name:'Expired'}]});await pool.query("UPDATE erp_import_batches SET expires_at=now()-interval '1 second' WHERE id=$1",[expired.data.id]);assert.equal((await call(`/imports/${expired.data.id}/commit`,{digest:expired.data.digest})).status,409);
   const open=async(kind,subjectType='supplier',subjectId=supplier)=>(await call('/privacy',{kind,subjectType,subjectId,receivedOn:new Date().toISOString().slice(0,10),verificationRef:'VERIFIED-TICKET-1'})).data;
