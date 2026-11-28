@@ -1,0 +1,21 @@
+.security-panel .security-task{border-top:1px solid #e5eaf0;margin-top:28px;padding-top:24px;scroll-margin-top:20px}
+.security-panel .security-task h2,.security-panel .security-task h3{font-size:17px;letter-spacing:-.01em;margin:0 0 8px;scroll-margin-top:20px}
+.security-panel .security-task>p,.security-panel .security-task form p{max-width:78ch;color:#617083;font-size:13px;line-height:1.6}
+.security-panel .security-task form{max-width:620px;margin:18px 0;padding:20px;background:#f8fafc;border:1px solid #e4eaf1;border-radius:6px}
+.security-panel .security-task form label{color:#3f5066;margin-top:14px}
+.security-panel .security-task form input:not([type=checkbox]),.security-panel .security-task form select{width:100%;margin:5px 0 0;background:#fff}
+.security-panel .security-task form input[type=checkbox]{display:inline-block;width:auto;margin:0 8px 0 0;vertical-align:middle}
+.security-panel .security-task form button{margin-top:18px}
+.security-panel .security-task ul{padding-left:20px;color:#526278}.security-panel .security-task li{padding:6px 0;border-bottom:1px solid #edf0f4}
+.security-panel .security-task .table-scroll{margin-top:10px}.security-panel .security-task table th,.security-panel .security-task table td{padding:12px}
+.security-session-action{display:flex;justify-content:space-between;align-items:center;gap:20px;max-width:620px;padding:14px 16px;border:1px solid #e4eaf1;border-radius:6px}
+.security-session-action strong{font-size:13px;color:#344255}.security-session-action p{margin:4px 0 0;color:#68788b;font-size:12px;line-height:1.45}.security-panel .security-session-action button{flex:none;margin:0}
+.operations-workspace .privacy-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:850px}
+.operations-workspace .privacy-field{min-width:0}.operations-workspace .privacy-field label{margin:0 0 7px;color:#40516a}.operations-workspace .privacy-field input,.operations-workspace .privacy-field select{width:100%;margin:0}
+.operations-workspace .privacy-field-wide{grid-column:1/-1}.operations-workspace .privacy-form-actions{max-width:850px;margin-top:20px;padding-top:16px;border-top:1px solid #e8edf2}
+.operations-workspace .privacy-register,.operations-workspace .privacy-case{margin-top:16px}.operations-workspace .privacy-register>p,.operations-workspace .privacy-case>p{max-width:85ch}
+.operations-workspace .privacy-table-scroll{overflow-x:auto}.operations-workspace .privacy-table-scroll table{min-width:680px}.operations-workspace .privacy-table-scroll th,.operations-workspace .privacy-table-scroll td{padding:12px;vertical-align:middle}
+.operations-workspace .privacy-case .privacy-case-status{display:inline-block;margin:3px 0 12px;padding:5px 10px;border-radius:4px;background:#edf3fa;color:#345675;font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.operations-workspace .privacy-case form{max-width:620px;padding:18px;border:1px solid #e4eaf1;border-radius:6px;background:#f8fafc}
+.operations-workspace .privacy-case form button{margin-top:2px}
+@media(max-width:700px){.security-session-action{align-items:flex-start;flex-direction:column}.operations-workspace .privacy-form-grid{grid-template-columns:1fr}.operations-workspace .privacy-field-wide{grid-column:auto}}

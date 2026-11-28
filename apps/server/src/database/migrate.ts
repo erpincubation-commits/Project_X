@@ -1,4 +1,12 @@
 import { recoveryMigration } from './recovery-migration';
+import { sourcingMigration } from './sourcing-migration';
+import { quoteWithdrawalMigration } from './quote-withdrawal-migration';
+import { quoteRecommendationMigration } from './quote-recommendation-migration';
+import { matchingPolicyMigration } from './matching-policy-migration';
+import { orderQuoteAwardMigration } from './order-quote-award-migration';
+import { serviceAcceptanceMigration } from './service-acceptance-migration';
+import { supplierQualificationMigration } from './supplier-qualification-migration';
+import { exceptionOwnershipMigration } from './exception-ownership-migration';
 import { createHash } from 'node:crypto';
 import { operationsMigration } from './operations-migration';
 import type { Pool } from 'pg';
@@ -117,7 +125,7 @@ export const migrations = [
       actor_id UUID NOT NULL REFERENCES erp_users(id), request_id UUID NOT NULL, operation TEXT NOT NULL,
       payload JSONB NOT NULL, response JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY(actor_id,request_id)
     );
-  ` }, booksMigration, tradeMigration, operationsMigration, recoveryMigration
+  ` }, booksMigration, tradeMigration, operationsMigration, recoveryMigration, sourcingMigration, quoteWithdrawalMigration, quoteRecommendationMigration, matchingPolicyMigration, orderQuoteAwardMigration, serviceAcceptanceMigration, supplierQualificationMigration, exceptionOwnershipMigration
 ];
 
 export const migrationChecksum=(sql:string)=>createHash('sha256').update(sql.replaceAll('\r\n','\n')).digest('hex');

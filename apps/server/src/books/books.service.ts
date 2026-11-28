@@ -108,7 +108,7 @@ export class BooksService {
   if(input.date<original.date)throw new BadRequestException('A reversal cannot precede the original journal date.');const reversalId=randomUUID();
   await client.query("INSERT INTO erp_journals(id,date,description,source,reversed_of,created_by,cash_flow_category) VALUES($1,$2,$3,'REVERSAL',$4,$5,$6)",[reversalId,input.date,input.reason,id,user.id,original.cashFlowCategory]);await this.saveLines(client,reversalId,original.lines.map(l=>({accountId:l.accountId,debit:l.credit,credit:l.debit,memo:l.memo})));return this.post(client,user,reversalId);
  });}
- async postSourceJournal(client:PoolClient,user:User,input:{source:'AP_INVOICE'|'AR_INVOICE'|'AP_PAYMENT'|'AR_COLLECTION'|'STOCK';sourceId:string;date:string;description:string;lines:JournalInput['lines'];cashFlowCategory?:Journal['cashFlowCategory']}){
+ async postSourceJournal(client:PoolClient,user:User,input:{source:'AP_INVOICE'|'AR_INVOICE'|'AP_PAYMENT'|'AR_COLLECTION'|'STOCK'|'SERVICE_ACCEPTANCE';sourceId:string;date:string;description:string;lines:JournalInput['lines'];cashFlowCategory?:Journal['cashFlowCategory']}){
   const id=randomUUID();await client.query('INSERT INTO erp_journals(id,date,description,source,source_id,created_by,cash_flow_category) VALUES($1,$2,$3,$4,$5,$6,$7)',[id,input.date,input.description.slice(0,1000),input.source,input.sourceId,user.id,input.cashFlowCategory||'UNCLASSIFIED']);await this.saveLines(client,id,input.lines);return this.post(client,user,id);
  }
  async receiveStock(client:PoolClient,user:User,input:{id:string;receiptLineId:string;itemId:string;warehouseId:string;date:string;reason:string;quantity:string;unitCost:string;value:string}){

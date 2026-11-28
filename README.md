@@ -1,6 +1,6 @@
 ﻿# SMB ERP
 
-A Windows-first Electron desktop application, React interface, NestJS server and shared PostgreSQL database. Implemented workflows include shared customers, supplier/item masters and purchase requests with independent approval or rejection. Permissions, versions, history and retries are enforced by the server.
+A Windows-first Electron desktop application, React interface, NestJS server and shared PostgreSQL database. Implemented workflows include shared customers, supplier/item masters, purchase requests with independent approval or rejection, and manual supplier quotation comparison. Permissions, versions, history and retries are enforced by the server. Quotation capture does not send RFQs or apply quote prices to orders.
 
 Start with the [desktop user guide](docs/USER_GUIDE.md) for connection, MFA, roles, procure-to-pay, accounting, stock, invoicing, imports/privacy and troubleshooting. Contributors update it with each application or operating-workflow change; see the [maintenance process](docs/USER_GUIDE_MAINTENANCE.md) and run `npm run docs:check`.
 

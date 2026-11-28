@@ -5,6 +5,7 @@ import { customerInput, supplierInput, itemInput, type User, type ImportPreview,
 import type { z } from 'zod';
 import { BooksService } from '../books/books.service';
 import { AuthService, publicUser } from '../auth/auth.service';
+import { findSupplierDuplicates, reviewSupplierDuplicates, supplierCandidatesOverlap } from '../procurement/supplier-duplicates';
 
 function canonical(v:unknown):unknown {
  if(Array.isArray(v)) return v.map(canonical);
@@ -26,6 +27,7 @@ export class OperationsService {
   input.rows.forEach((row,i)=>{
    const parsed=schema.safeParse(row);
    if(!parsed.success) { for(const issue of parsed.error.issues) errors.push({row:i+1,field:issue.path.join('.'),message:issue.message}); return; }
+   if(input.kind==='item'&&(parsed.data as {itemKind?:string}).itemKind==='SERVICE')errors.push({row:i+1,field:'itemKind',message:'Create service items in the desktop so expense accounts are reviewed.'});
    if(seen.has(parsed.data.code)) errors.push({row:i+1,field:'code',message:'Duplicate code in this file.'});
    seen.add(parsed.data.code);normalized.push(parsed.data);
   });
@@ -35,6 +37,17 @@ export class OperationsService {
    const table=input.kind==='supplier'?'erp_suppliers':input.kind==='item'?'erp_items':'erp_customers';
    const existing=new Set((await c.query(`SELECT code FROM ${table} WHERE code=ANY($1::text[])`,[[...seen]])).rows.map(r=>r.code));
    input.rows.forEach((r,i)=>{ const parsed=schema.safeParse(r);if(parsed.success&&existing.has(parsed.data.code)) errors.push({row:i+1,field:'code',message:'Code already exists. Imports only create new records.'}); });
+   if(input.kind==='supplier') {
+    const earlier:Array<{name:string;contactEmail:string;phone:string}>=[];
+    for(let i=0;i<input.rows.length;i++) {
+     const parsed=supplierInput.safeParse(input.rows[i]);if(!parsed.success)continue;
+     const supplier=parsed.data;
+     const inDatabase=await findSupplierDuplicates(c,supplier);
+     if(!supplier.duplicateReviewRef&&(inDatabase.total||earlier.some(row=>supplierCandidatesOverlap(supplier,row))))
+      errors.push({row:i+1,field:'duplicateReviewRef',message:'Possible duplicate supplier. Review matches and provide a duplicate review reference.'});
+     earlier.push(supplier);
+    }
+   }
    let id:string|null=null, expiresAt:string|null=null, hash:string|null=null;
    if(!errors.length) {
     id=randomUUID();hash=digest({kind:input.kind,rows:normalized});
@@ -56,13 +69,20 @@ export class OperationsService {
    if(!batch.valid || digest({kind:batch.kind,rows:batch.rows})!==hash) throw new ConflictException('Preview expired or changed. Run a new dry run.');
    const records:string[]=[];
    for(const row of batch.rows) {
+    if(batch.kind==='item'&&row.itemKind==='SERVICE')throw new ForbiddenException('Create service items in the desktop so expense accounts are reviewed.');
     const recordId=randomUUID();let record;
     if(batch.kind==='customer') {
      await c.query('INSERT INTO erp_customers(code,name) VALUES($1,$2)',[row.code,row.name]);records.push(row.code);
     } else {
-     if(batch.kind==='supplier') record=(await c.query('INSERT INTO erp_suppliers(id,code,name,contact_email,phone,payment_terms_days,active,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8) RETURNING *',[recordId,row.code,row.name,row.contactEmail,row.phone,row.paymentTermsDays,row.active,user.id])).rows[0];
-     else record=(await c.query('INSERT INTO erp_items(id,code,name,description,unit,active,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING *',[recordId,row.code,row.name,row.description,row.unit,row.active,user.id])).rows[0];
-     await c.query('INSERT INTO erp_record_history(entity_type,entity_id,version,action,actor_id,snapshot) VALUES($1,$2,1,\'imported\',$3,$4)',[batch.kind,recordId,user.id,JSON.stringify(record)]);records.push(recordId);
+     let duplicateReview: {reference:string;matchCount:number;matchedCodes:string[]}|undefined;
+     if(batch.kind==='supplier') {
+      const matches=await reviewSupplierDuplicates(c,row);
+      if(matches.total)duplicateReview={reference:row.duplicateReviewRef,matchCount:matches.total,matchedCodes:matches.matches.map(match=>match.code)};
+      record=(await c.query('INSERT INTO erp_suppliers(id,code,name,contact_email,phone,payment_terms_days,active,created_by,updated_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8) RETURNING *',[recordId,row.code,row.name,row.contactEmail,row.phone,row.paymentTermsDays,row.active,user.id])).rows[0];
+     }
+     else {if(row.serviceExpenseAccountId&&!(await c.query("SELECT 1 FROM erp_accounts WHERE id=$1 AND active AND type='EXPENSE' AND control IS NULL FOR SHARE",[row.serviceExpenseAccountId])).rowCount)throw new ConflictException('The service expense account is no longer available. Preview again.');record=(await c.query('INSERT INTO erp_items(id,code,name,description,unit,active,created_by,updated_by,item_kind,service_expense_account_id) VALUES($1,$2,$3,$4,$5,$6,$7,$7,$8,$9) RETURNING *',[recordId,row.code,row.name,row.description,row.unit,row.active,user.id,row.itemKind,row.serviceExpenseAccountId])).rows[0];}
+     await c.query('INSERT INTO erp_record_history(entity_type,entity_id,version,action,actor_id,snapshot) VALUES($1,$2,1,\'imported\',$3,$4)',[batch.kind,recordId,user.id,JSON.stringify(duplicateReview?{...record,context:{duplicateReview}}:record)]);records.push(recordId);
+     if(duplicateReview)await this.auth.audit(c,user.id,'supplier.duplicate_review',recordId,duplicateReview,'supplier');
     }
     await this.auth.audit(c,user.id,`${batch.kind}.imported`,batch.kind==='customer'?row.code:recordId,{batchId:id},batch.kind);
    }
@@ -135,11 +155,14 @@ export class OperationsService {
    else if(record.subjectType==='supplier') personal=(await c.query('SELECT id,code,name,contact_email,phone,payment_terms_days,active,privacy_restricted,created_at FROM erp_suppliers WHERE id=$1',[record.subjectId])).rows[0];
    else personal=(await c.query('SELECT code,name,created_at FROM erp_customers WHERE code=$1',[record.subjectId])).rows[0];
    const history=record.subjectType==='supplier'?(await c.query("SELECT version,action,occurred_at,snapshot FROM erp_record_history WHERE entity_type='supplier' AND entity_id=$1 ORDER BY id LIMIT 10001",[record.subjectId])).rows:[];
+   const supplierQuotes=record.subjectType==='supplier'?(await c.query('SELECT q.id,q.request_id,q.request_version,q.supplier_code,q.supplier_name,q.reference,q.valid_until,q.currency,q.created_by,q.created_at,w.reason AS withdrawal_reason,w.withdrawn_by,w.withdrawn_at FROM erp_supplier_quotes q LEFT JOIN erp_supplier_quote_withdrawals w ON w.quote_id=q.id WHERE q.supplier_id=$1 ORDER BY q.created_at,q.id LIMIT 10001',[record.subjectId])).rows:[];
+   const supplierRecommendations=record.subjectType==='supplier'?(await c.query('SELECT r.id,r.request_id,r.quote_id,r.reason,r.recommended_by,r.recommended_at FROM erp_quote_recommendations r JOIN erp_supplier_quotes q ON q.id=r.quote_id WHERE q.supplier_id=$1 ORDER BY r.sequence LIMIT 10001',[record.subjectId])).rows:[];
+   const supplierServiceAcceptances=record.subjectType==='supplier'?(await c.query('SELECT a.id,a.order_id,a.date,a.reference,a.evidence,a.accepted_by,a.created_at FROM erp_service_acceptances a JOIN erp_purchase_orders o ON o.id=a.order_id WHERE o.supplier_id=$1 ORDER BY a.created_at,a.id LIMIT 10001',[record.subjectId])).rows:[];
    const activity=(await c.query(`SELECT id::text,action,entity_type,entity_id,occurred_at FROM erp_audit_events WHERE (entity_type=$1 AND entity_id=$2) OR ($1='user' AND actor_id::text=$2) ORDER BY id LIMIT 10001`,[record.subjectType,record.subjectId])).rows;
-   if(history.length>10000||activity.length>10000) throw new ConflictException('Export exceeds the interactive limit. Arrange a reviewed offline export; no partial file was returned.');
+   if(history.length>10000||activity.length>10000||supplierQuotes.length>10000||supplierRecommendations.length>10000||supplierServiceAcceptances.length>10000) throw new ConflictException('Export exceeds the interactive limit. Arrange a reviewed offline export; no partial file was returned.');
    await this.auth.audit(c,user.id,'privacy.exported',id,{subjectType:record.subjectType,subjectId:record.subjectId},'privacy');
    // Return through a closure below to keep the personal data out of erp_operations.
-   thisExport={caseId:id,generatedAt:new Date().toISOString(),record:personal,history,activity,reviewRequired:['Review free-text business records, historical snapshots, imports, logs, backups and third-party information before disclosure.','Supply processing purposes, recipients, retention and rights information separately. This is an operational extract, not an automatic complete rights response.']};
+   thisExport={caseId:id,generatedAt:new Date().toISOString(),record:personal,history,activity,supplierQuotes,supplierRecommendations,supplierServiceAcceptances,reviewRequired:['Review quotation and service line details, free-text business records, historical snapshots, imports, logs, backups and third-party information before disclosure.','Supply processing purposes, recipients, retention and rights information separately. This is an operational extract, not an automatic complete rights response.']};
    return {exported:true};
   }).then(()=>thisExport!);
  }

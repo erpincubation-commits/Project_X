@@ -18,6 +18,8 @@ import {TradeService} from './trade/trade.service';
 import {SettlementService} from './trade/settlement.service';
 import {ReportsService} from './trade/reports.service';
 import {TradeController} from './trade/trade.controller';
+import {ServiceAcceptanceController} from './trade/service-acceptance.controller';
+import {ServiceAcceptanceService} from './trade/service-acceptance.service';
 
 @Controller('health')
 class HealthController {
@@ -28,7 +30,7 @@ class HealthController {
   }
 }
 @Module({
-  controllers: [HealthController, AuthController, RecoveryController, CustomersController, AccessController, ProcurementController, BooksController,TradeController,OperationsController],
-  providers: [DatabaseService, AuthService, AuthGuard, PermissionsGuard, CustomersService, ProcurementService, BooksService,TradeService,SettlementService,ReportsService,OperationsService]
+  controllers: [HealthController, AuthController, RecoveryController, CustomersController, AccessController, ProcurementController, BooksController,TradeController,ServiceAcceptanceController,OperationsController],
+  providers: [DatabaseService, AuthService, AuthGuard, PermissionsGuard, CustomersService, ProcurementService, BooksService,TradeService,SettlementService,ReportsService,OperationsService,ServiceAcceptanceService]
 })
 export class AppModule {}

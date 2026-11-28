@@ -4,6 +4,8 @@
 
 Electron loads bundled React/TypeScript assets in a sandboxed renderer. A context-isolated preload exposes a small set of typed operations. The main process validates IPC senders, handles server requests and retains session tokens in memory. Arbitrary IPC, Node.js access and direct renderer network access are not exposed.
 
+The desktop window uses the Project X ERP name. The existing Windows installer, shortcut, executable and Electron profile identity retain the SMB ERP name for upgrade and saved-connection compatibility; a packaged-name migration has not been performed.
+
 The NestJS server validates requests, enforces permissions for nine roles (including purchasing, accountant and inventory manager), manages MFA and sessions, and owns database transactions. PostgreSQL stores customer/master/request records, INR ledgers, periods, warehouse stock, valuations, bank reconciliations, encrypted MFA secrets, recovery/challenge/session hashes, migrations, audit/history events and retry responses. Desktop clients never connect directly to PostgreSQL. Shared contracts are in `packages/contracts`. See [authentication](AUTHENTICATION.md) for first-run setup and migration instructions.
 
 ## Implemented workflow
@@ -18,7 +20,7 @@ The native database helper manages an isolated development cluster under `.local
 
 1. Confirm jurisdiction/tax rules and legacy-data migration. INR, moving weighted average and the source posting matrix are now defined.
 2. Extend the implemented MFA, administrative account management and nine-role permissions with configurable business roles and approval rules.
-3. Validate the implemented supplier/item/request/order/receiving path and its accounting with the controlled pilot. See [procurement](PROCUREMENT.md) and [trade workflows](TRADE_WORKFLOWS.md); current source requires schema 8, including imports/privacy and operational controls.
+3. Validate the implemented supplier/item/request/order/receiving path and its accounting with the controlled pilot. See [procurement](PROCUREMENT.md) and [trade workflows](TRADE_WORKFLOWS.md); current source requires schema 14, including imports/privacy and operational controls.
 4. Extend implemented source-linked purchasing, AP/AR, payment approval/recording and statements with returns, credit notes/refunds, inventory dispatch and jurisdiction-specific tax. See TRADE_WORKFLOWS.md for migration 6 and supported flows.
 5. Validate security, concurrency, accessibility, load, backup/recovery, migration and financial acceptance before production for the selected release scope.
 6. Follow the [six-module roadmap](ERP_MODULE_ROADMAP.md): complete core/Finance gaps, add CRM and Sales with basic stock fulfilment, then expand Supply Chain, HR core/expenses and Marketing. Manufacturing, payroll, assets and projects remain separately scoped later work.

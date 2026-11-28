@@ -13,7 +13,7 @@ npm start
 
 `auth:configure` adds missing `MFA_ENCRYPTION_KEY` and `ADMIN_SETUP_TOKEN` values to the ignored server `.env`; it preserves existing values and database credentials. Known placeholders from `.env.example` are replaced with generated values. Keep this configuration private and back up the MFA key securely. Changing or losing the key makes stored authenticator seeds unreadable; do not generate a replacement on a live deployment.
 
-Migration 3 preserves accounts/customers, adds MFA/challenge/recovery data, expands the role constraint, allows unauthenticated audit actors, and invalidates legacy sessions. The current server requires schema version **8**, including [purchasing](PROCUREMENT.md), [accounting/inventory](ACCOUNTING_INVENTORY.md), schema 6 [trade workflows](TRADE_WORKFLOWS.md) and schema 7 [imports/privacy](IMPORTS_AND_PRIVACY.md). Upgrade client and server together using the [operations runbook](OPERATIONS_RUNBOOK.md). Do not run an older server against a newer database. Code changes do not automatically migrate an existing installation.
+Migration 3 preserves accounts/customers, adds MFA/challenge/recovery data, expands the role constraint, allows unauthenticated audit actors, and invalidates legacy sessions. The current server requires schema version **10**, including [purchasing](PROCUREMENT.md), [accounting/inventory](ACCOUNTING_INVENTORY.md), schema 6 [trade workflows](TRADE_WORKFLOWS.md) and schema 7 [imports/privacy](IMPORTS_AND_PRIVACY.md). Upgrade client and server together using the [operations runbook](OPERATIONS_RUNBOOK.md). Do not run an older server against a newer database. Code changes do not automatically migrate an existing installation.
 
 ## First administrator on a new database
 

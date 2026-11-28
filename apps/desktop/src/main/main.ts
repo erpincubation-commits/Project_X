@@ -7,11 +7,14 @@ import { registerProcurementIPC } from './procurement-ipc';
 import { registerBooksIPC } from './books-ipc';
 import { registerOperationsIPC } from './operations-ipc';
 import { registerTradeIPC } from './trade-ipc';
+import {p2pReportCsv,p2pReportKinds,type P2PReportKind} from './report-csv';
+import {statementQueryInput} from '@erp/contracts';
 import { createUserInput, updateUserInput, loginInput, setupInput, changePasswordInput, type CustomerInput } from '@erp/contracts';
 import { createLogger, diagnosticError } from '@erp/logging';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'erp', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 if (process.env.ERP_SMOKE_PROFILE) app.setPath('userData', process.env.ERP_SMOKE_PROFILE);
+// Keep the existing profile location so the saved server address remains available.
 app.setName('SMB ERP');
 const logDirectory = join(app.getPath('userData'), 'logs');
 const log = createLogger({ component: 'desktop', directory: logDirectory, console: !app.isPackaged });
@@ -25,7 +28,7 @@ function fatal(event: string, error: unknown) {
   fatalReported = true;
   quitting = true;
   log.error(event, diagnosticError(error));
-  if (!process.env.ERP_SMOKE_PROFILE) dialog.showErrorBox('SMB ERP could not continue', `Restart the application. If the problem continues, share the diagnostic log with your administrator.\n\nLogs: ${logDirectory}`);
+  if (!process.env.ERP_SMOKE_PROFILE) dialog.showErrorBox('Project X ERP could not continue', `Restart the application. If the problem continues, share the diagnostic log with your administrator.\n\nLogs: ${logDirectory}`);
   app.exit(1);
 }
 process.on('uncaughtException', error => fatal('process.uncaught_exception', error));
@@ -60,6 +63,17 @@ async function main() {
   registerBooksIPC(handle,api);
   registerTradeIPC(handle,api);
   registerOperationsIPC(handle,api);
+  handle('trade:exportP2PReport',async (value:unknown)=>{
+    if(!value||typeof value!=='object'||!('kind' in value)||!('from' in value)||!('to' in value)||Object.keys(value).some(k=>!['kind','from','to'].includes(k))||!p2pReportKinds.includes(value.kind as P2PReportKind))return {ok:false,error:'Choose a valid P2P report.'};
+    const range=statementQueryInput.safeParse({from:value.from,to:value.to});if(!range.success)return {ok:false,error:'Choose a valid reporting period.'};
+    const kind=value.kind as P2PReportKind;
+    const choice=await dialog.showSaveDialog({title:'Export P2P report',defaultPath:`p2p-${kind}-${range.data.from}-${range.data.to}.csv`,filters:[{name:'CSV report',extensions:['csv']}]});
+    if(choice.canceled||!choice.filePath)return {ok:true,data:{saved:false}};
+    const report=await api.financialStatements(range.data.from,range.data.to);if(!report.ok)return report;
+    if(kind==='itemSpend'&&!report.data.itemSpendReconciled)return {ok:false,error:'Item spend does not reconcile. Ask Finance to investigate before exporting.'};
+    await writeFile(choice.filePath,p2pReportCsv(report.data,kind,new Date().toISOString()),{encoding:'utf8',mode:0o600});
+    return {ok:true,data:{saved:true}};
+  });
   handle('server:get', () => api.server);
   handle('server:connect', async (value: unknown) => {
     if (typeof value !== 'string' || value.length > 2048) return { ok: false, error: 'Enter a valid server address.' };
@@ -134,7 +148,7 @@ async function main() {
 
   function openWindow() {
     const window = new BrowserWindow({
-      width: 1300, height: 850, minWidth: 900, minHeight: 650, title: 'SMB ERP', backgroundColor: '#f5f7f5',
+      width: 1300, height: 850, minWidth: 900, minHeight: 650, title: 'Project X ERP', backgroundColor: '#f5f7f5',
       show: !process.env.ERP_SMOKE_PROFILE,
       webPreferences: { preload: join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true, sandbox: true }
     });
